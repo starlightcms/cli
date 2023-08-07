@@ -81,11 +81,13 @@ will warn you in case the chosen template doesn't have a TypeScript version.`
         path: `templates/${args.template}`,
       })
       ux.action.stop()
-    } catch {
-      this.error(
-        'something went wrong while retrieving the template. Check the template name for typos and try again.',
-        { exit: 1 },
+    } catch (error: any) {
+      ux.action.stop('failed')
+      this.log(
+        '🛑 Error: something went wrong while retrieving the template. Check the template name for typos and try again.',
       )
+      this.log('⚠️ Original error message:')
+      this.error(error, { exit: 1 })
     }
 
     // Check if the template has a package.json file
