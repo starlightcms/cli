@@ -50,7 +50,7 @@
     "dirname": "starlight",
     "commands": "./dist/commands",
     "hooks": {
-      "init": "./src/hooks/init"
+      "init": "./dist/hooks/init"
     },
     "plugins": [
       "@oclif/plugin-help",
