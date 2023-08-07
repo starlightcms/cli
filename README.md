@@ -18,7 +18,7 @@ $ npm install -g @starlightcms/cli
 $ starlight COMMAND
 running command...
 $ starlight (--version)
-@starlightcms/cli/0.0.0 darwin-arm64 node-v16.16.0
+@starlightcms/cli/0.1.0 darwin-arm64 node-v18.17.0
 $ starlight --help [COMMAND]
 USAGE
   $ starlight COMMAND
@@ -27,8 +27,7 @@ USAGE
 <!-- usagestop -->
 # Commands
 <!-- commands -->
-* [`starlight hello PERSON`](#starlight-hello-person)
-* [`starlight hello world`](#starlight-hello-world)
+* [`starlight create TEMPLATE [PROJECTNAME]`](#starlight-create-template-projectname)
 * [`starlight help [COMMANDS]`](#starlight-help-commands)
 * [`starlight plugins`](#starlight-plugins)
 * [`starlight plugins:install PLUGIN...`](#starlight-pluginsinstall-plugin)
@@ -40,45 +39,51 @@ USAGE
 * [`starlight plugins:uninstall PLUGIN...`](#starlight-pluginsuninstall-plugin-2)
 * [`starlight plugins update`](#starlight-plugins-update)
 
-## `starlight hello PERSON`
+## `starlight create TEMPLATE [PROJECTNAME]`
 
-Say hello
+Create an application using a template.
 
 ```
 USAGE
-  $ starlight hello PERSON -f <value>
+  $ starlight create TEMPLATE [PROJECTNAME] [--typescript]
 
 ARGUMENTS
-  PERSON  Person to say hello to
+  TEMPLATE     Web Template name or git repository URL
+  PROJECTNAME  The name of the project (and folder) that will be created
 
 FLAGS
-  -f, --from=<value>  (required) Who is saying hello
+  --typescript  Clone the TypeScript version (if available)
 
 DESCRIPTION
-  Say hello
+  Create an application using a template.
+
+  This command creates a new application using an existing template by cloning
+  the template repository locally and configuring a Starlight SDK client using
+  environment variables. Templates can be either a Web Template name or a git
+  repository URL (starting with https:// or git://).
+
+  Web Templates are official Starlight web application templates, learn more at:
+  https://github.com/starlightcms/web-templates
+
+  Tip: Some Web Templates offer both JavaScript and TypeScript versions. You can
+  choose to clone a TypeScript version by passing a --typescript flag. The CLI
+  will warn you in case the chosen template doesn't have a TypeScript version.
 
 EXAMPLES
-  $ oex hello friend --from oclif
-  hello friend from oclif! (./src/commands/hello/index.ts)
+  Create an application using the nextjs Web Template
+
+    $ starlight create nextjs
+
+  Create an application using a git repository
+
+    $ starlight create https://github.com/my-org/example-template
+
+  Clone the TypeScript version of the template (if available)
+
+    $ starlight create nextjs --typescript
 ```
 
-_See code: [dist/commands/hello/index.ts](https://github.com/lucas-varela/cli/blob/v0.0.0/dist/commands/hello/index.ts)_
-
-## `starlight hello world`
-
-Say hello world
-
-```
-USAGE
-  $ starlight hello world
-
-DESCRIPTION
-  Say hello world
-
-EXAMPLES
-  $ starlight hello world
-  hello world! (./src/commands/hello/world.ts)
-```
+_See code: [dist/commands/create.ts](https://github.com/lucas-varela/cli/blob/v0.1.0/dist/commands/create.ts)_
 
 ## `starlight help [COMMANDS]`
 
@@ -98,7 +103,7 @@ DESCRIPTION
   Display help for starlight.
 ```
 
-_See code: [@oclif/plugin-help](https://github.com/oclif/plugin-help/blob/v5.2.14/src/commands/help.ts)_
+_See code: [@oclif/plugin-help](https://github.com/oclif/plugin-help/blob/v5.2.16/src/commands/help.ts)_
 
 ## `starlight plugins`
 
@@ -121,7 +126,7 @@ EXAMPLES
   $ starlight plugins
 ```
 
-_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v3.1.8/src/commands/plugins/index.ts)_
+_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v3.1.10/src/commands/plugins/index.ts)_
 
 ## `starlight plugins:install PLUGIN...`
 
@@ -186,6 +191,8 @@ EXAMPLES
   $ starlight plugins:inspect myplugin
 ```
 
+_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v3.1.10/src/commands/plugins/inspect.ts)_
+
 ## `starlight plugins:install PLUGIN...`
 
 Installs a plugin into the CLI.
@@ -224,6 +231,8 @@ EXAMPLES
   $ starlight plugins:install someuser/someplugin
 ```
 
+_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v3.1.10/src/commands/plugins/install.ts)_
+
 ## `starlight plugins:link PLUGIN`
 
 Links a plugin into the CLI for development.
@@ -251,28 +260,7 @@ EXAMPLES
   $ starlight plugins:link myplugin
 ```
 
-## `starlight plugins:uninstall PLUGIN...`
-
-Removes a plugin from the CLI.
-
-```
-USAGE
-  $ starlight plugins:uninstall PLUGIN...
-
-ARGUMENTS
-  PLUGIN  plugin to uninstall
-
-FLAGS
-  -h, --help     Show CLI help.
-  -v, --verbose
-
-DESCRIPTION
-  Removes a plugin from the CLI.
-
-ALIASES
-  $ starlight plugins unlink
-  $ starlight plugins remove
-```
+_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v3.1.10/src/commands/plugins/link.ts)_
 
 ## `starlight plugins:uninstall PLUGIN...`
 
@@ -296,6 +284,31 @@ ALIASES
   $ starlight plugins unlink
   $ starlight plugins remove
 ```
+
+## `starlight plugins:uninstall PLUGIN...`
+
+Removes a plugin from the CLI.
+
+```
+USAGE
+  $ starlight plugins:uninstall PLUGIN...
+
+ARGUMENTS
+  PLUGIN  plugin to uninstall
+
+FLAGS
+  -h, --help     Show CLI help.
+  -v, --verbose
+
+DESCRIPTION
+  Removes a plugin from the CLI.
+
+ALIASES
+  $ starlight plugins unlink
+  $ starlight plugins remove
+```
+
+_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v3.1.10/src/commands/plugins/uninstall.ts)_
 
 ## `starlight plugins:uninstall PLUGIN...`
 
@@ -335,4 +348,6 @@ FLAGS
 DESCRIPTION
   Update installed plugins.
 ```
+
+_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v3.1.10/src/commands/plugins/update.ts)_
 <!-- commandsstop -->
