@@ -18,7 +18,7 @@ $ npm install -g @starlightcms/cli
 $ starlight COMMAND
 running command...
 $ starlight (--version)
-@starlightcms/cli/0.1.1 darwin-arm64 node-v18.17.0
+@starlightcms/cli/0.1.2 darwin-arm64 node-v18.17.0
 $ starlight --help [COMMAND]
 USAGE
   $ starlight COMMAND
@@ -83,7 +83,7 @@ EXAMPLES
     $ starlight create nextjs --typescript
 ```
 
-_See code: [dist/commands/create.ts](https://github.com/lucas-varela/cli/blob/v0.1.1/dist/commands/create.ts)_
+_See code: [dist/commands/create.ts](https://github.com/lucas-varela/cli/blob/v0.1.2/dist/commands/create.ts)_
 
 ## `starlight help [COMMANDS]`
 
