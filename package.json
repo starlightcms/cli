@@ -23,6 +23,7 @@
     "@oclif/plugin-plugins": "^3.1.8",
     "@oclif/plugin-warn-if-update-available": "^2.0.46",
     "got": "^11.8.3",
+    "isomorphic-fetch": "^3.0.0",
     "octokit": "^3.1.0",
     "tar": "^6.1.15"
   },

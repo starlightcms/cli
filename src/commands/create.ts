@@ -1,18 +1,17 @@
-import { Args, Command, Flags, ux } from '@oclif/core'
+import { Args, Flags, ux } from '@oclif/core'
 import { input } from '@inquirer/prompts'
 import got from 'got'
 import { x as tarExtract } from 'tar'
-import { Octokit } from 'octokit'
 import * as path from 'node:path'
 import * as os from 'node:os'
 import * as stream from 'node:stream/promises'
 import { createWriteStream } from 'node:fs'
 import * as fs from 'node:fs/promises'
+import { BaseCommand } from '../BaseCommand'
+import { octokit } from '../utils/github'
 import { installDependencies } from '../utils/install'
 
-const octokit = new Octokit()
-
-export default class Create extends Command {
+export default class Create extends BaseCommand {
   static summary = 'Create an application using a template.'
   static description = `This command creates a new application using an existing template by cloning
 the template repository locally and configuring a Starlight SDK client using
@@ -82,12 +81,10 @@ will warn you in case the chosen template doesn't have a TypeScript version.`
       })
       ux.action.stop()
     } catch (error: any) {
-      ux.action.stop('failed')
-      this.log(
-        '🛑 Error: something went wrong while retrieving the template. Check the template name for typos and try again.',
+      this.exitWithError(
+        'something went wrong while retrieving the template. Check the template name for typos and try again.',
+        error,
       )
-      this.log('⚠️ Original error message:')
-      this.error(error, { exit: 1 })
     }
 
     // Check if the template has a package.json file
@@ -95,9 +92,7 @@ will warn you in case the chosen template doesn't have a TypeScript version.`
       Array.isArray(templateFiles.data) &&
       !templateFiles.data.some((file) => file.name === 'package.json')
     ) {
-      this.error('template is missing package.json file.', {
-        exit: 1,
-      })
+      this.exitWithError('template is missing package.json file.')
     }
 
     // Download repository files
@@ -112,11 +107,11 @@ will warn you in case the chosen template doesn't have a TypeScript version.`
         createWriteStream(tarFile),
       )
       ux.action.stop()
-    } catch {
+    } catch (error: any) {
       await fs.unlink(tarFile)
-      this.error(
+      this.exitWithError(
         'something went wrong while downloading the template tarball from GitHub. Check your internet connection and try again.',
-        { exit: 1 },
+        error,
       )
     }
 
@@ -125,13 +120,13 @@ will warn you in case the chosen template doesn't have a TypeScript version.`
 
     try {
       await fs.mkdir(projectFolder)
-    } catch {
-      this.error(
+    } catch (error: any) {
+      this.exitWithError(
         `something went wrong while creating this folder: ${projectFolder}. Make sure this folder doesn't exist and that you have permission to write in ${path.resolve(
           projectFolder,
           '..',
         )}.`,
-        { exit: 1 },
+        error,
       )
     }
 
@@ -182,7 +177,7 @@ will warn you in case the chosen template doesn't have a TypeScript version.`
 
     // Show usage instructions
     this.log('')
-    this.log(`✅  ${args.template} template cloned successfully.`)
+    this.log(`✅ ${args.template} template cloned successfully.`)
     this.log(
       'To start working, enter its folder and run the development server:',
     )

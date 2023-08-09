@@ -5,6 +5,7 @@
     "prettier"
   ],
   "rules": {
-    "node/no-missing-import": "off"
+    "node/no-missing-import": "off",
+    "unicorn/filename-case": "off"
   }
 }
