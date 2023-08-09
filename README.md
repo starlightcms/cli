@@ -18,7 +18,7 @@ $ npm install -g @starlightcms/cli
 $ starlight COMMAND
 running command...
 $ starlight (--version)
-@starlightcms/cli/0.1.2 darwin-arm64 node-v18.17.0
+@starlightcms/cli/0.1.3 darwin-arm64 node-v16.16.0
 $ starlight --help [COMMAND]
 USAGE
   $ starlight COMMAND
@@ -83,7 +83,7 @@ EXAMPLES
     $ starlight create nextjs --typescript
 ```
 
-_See code: [dist/commands/create.ts](https://github.com/lucas-varela/cli/blob/v0.1.2/dist/commands/create.ts)_
+_See code: [dist/commands/create.ts](https://github.com/lucas-varela/cli/blob/v0.1.3/dist/commands/create.ts)_
 
 ## `starlight help [COMMANDS]`
 
@@ -126,7 +126,7 @@ EXAMPLES
   $ starlight plugins
 ```
 
-_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v3.1.10/src/commands/plugins/index.ts)_
+_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v3.2.0/src/commands/plugins/index.ts)_
 
 ## `starlight plugins:install PLUGIN...`
 
@@ -191,7 +191,7 @@ EXAMPLES
   $ starlight plugins:inspect myplugin
 ```
 
-_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v3.1.10/src/commands/plugins/inspect.ts)_
+_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v3.2.0/src/commands/plugins/inspect.ts)_
 
 ## `starlight plugins:install PLUGIN...`
 
@@ -231,7 +231,7 @@ EXAMPLES
   $ starlight plugins:install someuser/someplugin
 ```
 
-_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v3.1.10/src/commands/plugins/install.ts)_
+_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v3.2.0/src/commands/plugins/install.ts)_
 
 ## `starlight plugins:link PLUGIN`
 
@@ -260,7 +260,7 @@ EXAMPLES
   $ starlight plugins:link myplugin
 ```
 
-_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v3.1.10/src/commands/plugins/link.ts)_
+_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v3.2.0/src/commands/plugins/link.ts)_
 
 ## `starlight plugins:uninstall PLUGIN...`
 
@@ -308,7 +308,7 @@ ALIASES
   $ starlight plugins remove
 ```
 
-_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v3.1.10/src/commands/plugins/uninstall.ts)_
+_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v3.2.0/src/commands/plugins/uninstall.ts)_
 
 ## `starlight plugins:uninstall PLUGIN...`
 
@@ -349,5 +349,5 @@ DESCRIPTION
   Update installed plugins.
 ```
 
-_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v3.1.10/src/commands/plugins/update.ts)_
+_See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v3.2.0/src/commands/plugins/update.ts)_
 <!-- commandsstop -->
