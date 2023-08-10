@@ -62,6 +62,8 @@ will warn you in case the chosen template doesn't have a TypeScript version.`
   public async run(): Promise<void> {
     const { args } = await this.parse(Create)
 
+    await this.needsAuthentication('You need to login to create a new project')
+
     const projectName =
       args.projectName ??
       (await input({
