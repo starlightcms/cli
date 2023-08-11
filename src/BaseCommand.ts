@@ -6,6 +6,7 @@ import got, { HTTPError } from 'got'
 import { input, password } from '@inquirer/prompts'
 import chalk from 'chalk'
 import { LoginResponseData } from './types/adminApi'
+import { admin, ADMIN_API_URL } from './utils/admin'
 
 type LoginMethod = 'password' | 'email-code'
 
@@ -15,8 +16,6 @@ type AuthData = {
 }
 
 export abstract class BaseCommand extends Command {
-  public readonly ADMIN_API_URL = 'https://admin.starlightcms.io/v2'
-
   public exitWithError(
     message?: string,
     originalError?: Error,
@@ -79,20 +78,29 @@ export abstract class BaseCommand extends Command {
 
   private async validateToken(data: AuthData): Promise<boolean> {
     try {
-      const response = await got.get(`${this.ADMIN_API_URL}/auth/me`, {
+      const response = await got.get(`${ADMIN_API_URL}/auth/me`, {
         headers: {
           Cookie: `token=${data.token}`,
         },
       })
 
-      return response.statusCode === 200
+      if (response.statusCode === 200) {
+        // Set token cookie in all Admin API calls
+        admin.defaults.options.headers = {
+          Cookie: `token=${data.token}`,
+        }
+
+        return true
+      }
+
+      return false
     } catch (error: any) {
       // Unauthorized response is expected when the token is invalid or expired
       if (error instanceof HTTPError && error.response.statusCode === 401) {
         // Try to refresh the token
         try {
           const response = await got
-            .post(`${this.ADMIN_API_URL}/auth/refresh`, {
+            .post(`${ADMIN_API_URL}/auth/refresh`, {
               headers: {
                 Cookie: `token=${data.token}`,
               },
@@ -100,6 +108,12 @@ export abstract class BaseCommand extends Command {
             .json<LoginResponseData>()
 
           await this.setAuthData({ email: data.email, token: response.token })
+
+          // Set token cookie in all Admin API calls
+          admin.defaults.options.headers = {
+            Cookie: `token=${data.token}`,
+          }
+
           return true
         } catch {
           // Token expired, no-op
@@ -141,7 +155,7 @@ export abstract class BaseCommand extends Command {
 
       try {
         const response = await got
-          .post(`${this.ADMIN_API_URL}/auth/check`, {
+          .post(`${ADMIN_API_URL}/auth/check`, {
             json: { email },
           })
           .json<{ method: LoginMethod }>()
@@ -196,9 +210,7 @@ export abstract class BaseCommand extends Command {
 
       return await got
         .post(
-          `${this.ADMIN_API_URL}/auth/${
-            method === 'password' ? 'login' : 'code'
-          }`,
+          `${ADMIN_API_URL}/auth/${method === 'password' ? 'login' : 'code'}`,
           {
             json: payload,
           },
@@ -259,7 +271,7 @@ export abstract class BaseCommand extends Command {
     }
 
     try {
-      await got.post(`${this.ADMIN_API_URL}/auth/logout`, {
+      await got.post(`${ADMIN_API_URL}/auth/logout`, {
         headers: {
           Cookie: `token=${data.token}`,
         },
@@ -297,6 +309,11 @@ export abstract class BaseCommand extends Command {
       email,
       token: loginData.token,
     })
+
+    // Set token cookie in all Admin API calls
+    admin.defaults.options.headers = {
+      Cookie: `token=${loginData.token}`,
+    }
 
     this.log('✅ Authenticated, continuing...')
   }

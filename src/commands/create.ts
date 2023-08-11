@@ -10,6 +10,7 @@ import * as fs from 'node:fs/promises'
 import { BaseCommand } from '../BaseCommand'
 import { octokit } from '../utils/github'
 import { installDependencies } from '../utils/install'
+import { selectOrganization, selectWorkspace } from '../utils/admin'
 
 export default class Create extends BaseCommand {
   static summary = 'Create an application using a template.'
@@ -162,28 +163,45 @@ will warn you in case the chosen template doesn't have a TypeScript version.`
     await installDependencies(projectFolder)
     ux.action.stop()
 
-    // Setup .env
-    // try {
-    //   let envContents = await fs.readFile(
-    //     path.join(projectFolder, '.env.example'),
-    //     { encoding: 'utf8' },
-    //   )
-    //
-    //   envContents = envContents.replace('NEXT_PUBLIC_STARLIGHT_WORKSPACE=replace_me', 'NEXT_PUBLIC_STARLIGHT_WORKSPACE=replace_me')
-    //
-    //   this.log(envContents)
-    //   // por enquanto, só precisa copiar .env.example direto e dar replace
-    // } catch {
-    //   this.warn('.env.example file not found, skipping Starlight SDK setup.')
-    // }
+    // Setup Starlight SDK
+    this.log()
+    this.log("🌟 Let's configure the included Starlight SDK:")
+
+    const organization = await selectOrganization(this)
+    const workspace = await selectWorkspace(this, organization)
+
+    try {
+      let envContents = await fs.readFile(
+        path.join(projectFolder, '.env.example'),
+        { encoding: 'utf8' },
+      )
+
+      envContents = envContents.replace(
+        'NEXT_PUBLIC_STARLIGHT_WORKSPACE=replace_me',
+        `NEXT_PUBLIC_STARLIGHT_WORKSPACE=${workspace.id}`,
+      )
+
+      try {
+        await fs.writeFile(path.join(projectFolder, '.env'), envContents, {
+          encoding: 'utf8',
+        })
+      } catch {
+        this.warn(
+          "something went wrong while writing your project's .env file, skipping Starlight SDK setup.",
+        )
+      }
+    } catch {
+      this.warn('.env.example file not found, skipping Starlight SDK setup.')
+    }
 
     // Show usage instructions
-    this.log('')
+    this.log()
     this.log(`✅ ${args.template} template cloned successfully.`)
+    this.log()
     this.log(
       'To start working, enter its folder and run the development server:',
     )
-    this.log('')
+    this.log()
     this.log(`$ cd ${projectName}`)
     this.log('$ npm run dev')
   }
