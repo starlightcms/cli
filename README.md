@@ -18,7 +18,7 @@ $ npm install -g @starlightcms/cli
 $ starlight COMMAND
 running command...
 $ starlight (--version)
-@starlightcms/cli/0.1.3 darwin-arm64 node-v16.16.0
+@starlightcms/cli/0.1.4 darwin-arm64 node-v16.16.0
 $ starlight --help [COMMAND]
 USAGE
   $ starlight COMMAND
@@ -29,6 +29,8 @@ USAGE
 <!-- commands -->
 * [`starlight create TEMPLATE [PROJECTNAME]`](#starlight-create-template-projectname)
 * [`starlight help [COMMANDS]`](#starlight-help-commands)
+* [`starlight login`](#starlight-login)
+* [`starlight logout`](#starlight-logout)
 * [`starlight plugins`](#starlight-plugins)
 * [`starlight plugins:install PLUGIN...`](#starlight-pluginsinstall-plugin)
 * [`starlight plugins:inspect PLUGIN...`](#starlight-pluginsinspect-plugin)
@@ -83,7 +85,7 @@ EXAMPLES
     $ starlight create nextjs --typescript
 ```
 
-_See code: [dist/commands/create.ts](https://github.com/lucas-varela/cli/blob/v0.1.3/dist/commands/create.ts)_
+_See code: [dist/commands/create.ts](https://github.com/lucas-varela/cli/blob/v0.1.4/dist/commands/create.ts)_
 
 ## `starlight help [COMMANDS]`
 
@@ -104,6 +106,40 @@ DESCRIPTION
 ```
 
 _See code: [@oclif/plugin-help](https://github.com/oclif/plugin-help/blob/v5.2.16/src/commands/help.ts)_
+
+## `starlight login`
+
+Log in with your Starlight account
+
+```
+USAGE
+  $ starlight login
+
+DESCRIPTION
+  Log in with your Starlight account
+
+EXAMPLES
+  $ starlight login
+```
+
+_See code: [dist/commands/login.ts](https://github.com/lucas-varela/cli/blob/v0.1.4/dist/commands/login.ts)_
+
+## `starlight logout`
+
+Log out from your Starlight account
+
+```
+USAGE
+  $ starlight logout
+
+DESCRIPTION
+  Log out from your Starlight account
+
+EXAMPLES
+  $ starlight logout
+```
+
+_See code: [dist/commands/logout.ts](https://github.com/lucas-varela/cli/blob/v0.1.4/dist/commands/logout.ts)_
 
 ## `starlight plugins`
 
