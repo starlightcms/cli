@@ -44,9 +44,7 @@ export abstract class BaseCommand extends Command {
 
   public async getAuthData(): Promise<AuthData | false> {
     try {
-      const data = await fs.readFile(this.getAuthFilePath(), {
-        encoding: 'utf8',
-      })
+      const data = await fs.readFile(this.getAuthFilePath(), 'utf8')
 
       return JSON.parse(Buffer.from(data, 'base64').toString('utf8'))
     } catch {
@@ -111,7 +109,7 @@ export abstract class BaseCommand extends Command {
 
           // Set token cookie in all Admin API calls
           admin.defaults.options.headers = {
-            Cookie: `token=${data.token}`,
+            Cookie: `token=${response.token}`,
           }
 
           return true

@@ -7,17 +7,29 @@ import * as os from 'node:os'
 import * as stream from 'node:stream/promises'
 import { createWriteStream } from 'node:fs'
 import * as fs from 'node:fs/promises'
+import { constants as fsConstants } from 'node:fs'
 import { BaseCommand } from '../BaseCommand'
 import { octokit } from '../utils/github'
 import { installDependencies } from '../utils/install'
 import { selectOrganization, selectWorkspace } from '../utils/admin'
+import execa from 'execa'
+import {
+  getTemplateMetadata,
+  makeParameterMap,
+  replaceParameters,
+  runActions,
+  validateTemplateMetadata,
+} from '../utils/template'
+import { TemplateMetadata, TemplateParameters } from '../types/template'
+import { ValidationError } from 'yup'
+import chalk from 'chalk'
 
 export default class Create extends BaseCommand {
   static summary = 'Create an application using a template.'
   static description = `This command creates a new application using an existing template by cloning
-the template repository locally and configuring a Starlight SDK client using
-environment variables. Templates can be either a Web Template name or a git
-repository URL (starting with https:// or git://).
+its files locally and configuring it using metadata defined in the template.
+Templates can be fetched from the Web Templates repository, git repositories,
+or from a local directory.
 
 Web Templates are official Starlight web application templates, learn more at:
 https://github.com/starlightcms/web-templates
@@ -37,25 +49,33 @@ will warn you in case the chosen template doesn't have a TypeScript version.`
         '<%= config.bin %> <%= command.id %> https://github.com/my-org/example-template',
     },
     {
+      description: 'Create an application using a local template',
+      command:
+        '<%= config.bin %> <%= command.id %> ~/my-company/starlight-templates/example-template',
+    },
+    {
       description:
-        'Clone the TypeScript version of the template (if available)',
+        'Clone the TypeScript version of a Web Template (if available)',
       command: '<%= config.bin %> <%= command.id %> nextjs --typescript',
     },
   ]
 
   static flags = {
     typescript: Flags.boolean({
-      description: 'Clone the TypeScript version (if available)',
+      description:
+        'Clone the TypeScript version of a Web Template (if available)',
     }),
   }
 
   static args = {
     template: Args.string({
-      description: 'Web Template name or git repository URL',
+      description:
+        'Web Template name, git repository URL or local directory path',
       required: true,
     }),
     projectName: Args.string({
-      description: 'The name of the project (and folder) that will be created',
+      description:
+        'The name of the project (and directory) that will be created',
       required: false,
     }),
   }
@@ -65,13 +85,115 @@ will warn you in case the chosen template doesn't have a TypeScript version.`
 
     await this.needsAuthentication('You need to login to create a new project')
 
+    const [projectName, projectPath] = await this.promptProjectInfo(
+      args.template,
+      args.projectName,
+    )
+
+    if (await this.isLocalDirectory(args.template)) {
+      // User wants to clone a local template
+      await this.cloneLocalDirectory(args.template, projectPath)
+    } else if (this.isGitRepositoryUrl(args.template)) {
+      // User wants to clone a git template
+      await this.cloneRepository(args.template, projectPath)
+    } else {
+      // User wants to clone a Web Template
+      await this.checkIfWebTemplateExists(args.template)
+      await this.cloneWebTemplate(args.template, projectPath)
+    }
+
+    // Install dependencies
+    ux.action.start('Running npm install')
+    await installDependencies(projectPath)
+    ux.action.stop()
+
+    let templateMetadata: TemplateMetadata | null = null
+    let templateParameters: TemplateParameters | null = null
+
+    // Setup Starlight SDK if template metadata is present and valid
+    try {
+      const loadedMetadata = await getTemplateMetadata(projectPath)
+      templateMetadata = await validateTemplateMetadata(loadedMetadata)
+
+      this.log()
+      this.log('🌟 The included Starlight SDK should request content from:')
+
+      const organization = await selectOrganization(this)
+      const workspace = await selectWorkspace(this, organization)
+      templateParameters = makeParameterMap(
+        projectName,
+        organization,
+        workspace,
+      )
+
+      ux.action.start('Running template actions')
+      await runActions(templateMetadata, projectPath, templateParameters)
+      ux.action.stop()
+    } catch (error: any) {
+      if (error.code === 'ENOENT') {
+        this.warn(
+          `Template metadata file not found at ${error.path}; Starlight SDK configuration skipped.`,
+        )
+      } else if (error instanceof ValidationError) {
+        this.warn(
+          `Template metadata file (${error.path}) is invalid; Starlight SDK configuration skipped.`,
+        )
+        this.log(
+          `Tip: use "${chalk.cyan(
+            'npx @starlightcms/cli template validate',
+          )}" to find structure and syntax problems in your template metadata files. Try again after fixing existing issues.`,
+        )
+      } else {
+        this.warn(
+          `Something went wrong while reading the template metadata file (${error.path}); Starlight SDK configuration skipped.`,
+        )
+        this.log('Tip: check if its JSON syntax is correct and try again.')
+      }
+    }
+
+    await this.initializeGit(projectPath)
+
+    // Show usage instructions
+    if (
+      templateMetadata &&
+      templateMetadata.instructions &&
+      templateParameters
+    ) {
+      this.log()
+      this.log(
+        '✅ Template cloned successfully. The template provides these instructions:',
+      )
+      this.log()
+      this.log(
+        replaceParameters(templateMetadata.instructions, templateParameters),
+      )
+    } else {
+      this.log()
+      this.log(`✅ Template cloned successfully.`)
+    }
+  }
+
+  private async promptProjectInfo(
+    templateArgument: string,
+    projectNameArgument?: string,
+  ): Promise<[string, string]> {
     const projectName =
-      args.projectName ??
+      projectNameArgument ??
       (await input({
         message: 'What will your project be called?',
-        default: args.template?.replace('-typescript', '') ?? 'example-app',
+        default:
+          (await this.isLocalDirectory(templateArgument)) ||
+          this.isGitRepositoryUrl(templateArgument)
+            ? 'my-project'
+            : templateArgument.replace('-typescript', ''),
       }))
 
+    const projectPath = path.resolve(projectName)
+
+    return [projectName, projectPath]
+  }
+
+  private async checkIfWebTemplateExists(template: string): Promise<void> {
     let templateFiles
 
     // Fetch metadata
@@ -80,7 +202,7 @@ will warn you in case the chosen template doesn't have a TypeScript version.`
       templateFiles = await octokit.rest.repos.getContent({
         owner: 'starlightcms',
         repo: 'web-templates',
-        path: `templates/${args.template}`,
+        path: `templates/${template}`,
       })
       ux.action.stop()
     } catch (error: any) {
@@ -97,7 +219,12 @@ will warn you in case the chosen template doesn't have a TypeScript version.`
     ) {
       this.exitWithError('template is missing package.json file.')
     }
+  }
 
+  private async cloneWebTemplate(
+    template: string,
+    projectPath: string,
+  ): Promise<void> {
     // Download repository files
     const tarFile = path.join(os.tmpdir(), `sl-template-${Date.now()}`)
 
@@ -105,7 +232,7 @@ will warn you in case the chosen template doesn't have a TypeScript version.`
       ux.action.start('Downloading template tarball')
       await stream.pipeline(
         got.stream(
-          `https://codeload.github.com/starlightcms/web-templates/tar.gz/main`,
+          'https://codeload.github.com/starlightcms/web-templates/tar.gz/main',
         ),
         createWriteStream(tarFile),
       )
@@ -119,24 +246,23 @@ will warn you in case the chosen template doesn't have a TypeScript version.`
     }
 
     // Create project folder
-    const projectFolder = path.resolve(projectName)
-
     try {
-      await fs.mkdir(projectFolder)
+      await fs.mkdir(projectPath)
     } catch (error: any) {
       this.exitWithError(
-        `something went wrong while creating this folder: ${projectFolder}. Make sure this folder doesn't exist and that you have permission to write in ${path.resolve(
-          projectFolder,
+        `something went wrong while creating this folder: ${projectPath}. Make sure this folder doesn't exist and that you have permission to write in ${path.resolve(
+          projectPath,
           '..',
         )}.`,
         error,
       )
     }
 
+    // Extract template files
     ux.action.start('Extracting template files')
     await tarExtract({
       file: tarFile,
-      cwd: projectFolder,
+      cwd: projectPath,
       // strip ignores the first N levels of files in the given tarball.
       // Since all templates live inside the "templates" folder in the
       // repository, we need to ignore 3 levels:
@@ -150,59 +276,101 @@ will warn you in case the chosen template doesn't have a TypeScript version.`
       strip: 3,
       // We only want to extract the files of the selected template.
       filter: (path) => {
-        return path.startsWith(`web-templates-main/templates/${args.template}`)
+        return path.startsWith(`web-templates-main/templates/${template}`)
       },
     })
     ux.action.stop()
 
     // Delete template tarball
     await fs.unlink(tarFile)
+  }
 
-    // Install dependencies
-    ux.action.start('Running npm install')
-    await installDependencies(projectFolder)
-    ux.action.stop()
+  private async isLocalDirectory(string: string) {
+    try {
+      await fs.access(path.resolve(string), fsConstants.R_OK)
+      return true
+    } catch {
+      return false
+    }
+  }
 
-    // Setup Starlight SDK
-    this.log()
-    this.log("🌟 Let's configure the included Starlight SDK:")
+  private async cloneLocalDirectory(
+    templatePath: string,
+    projectPath: string,
+  ): Promise<void> {
+    ux.action.start('Cloning local template')
 
-    const organization = await selectOrganization(this)
-    const workspace = await selectWorkspace(this, organization)
+    const resolvedTemplatePath = path.resolve(templatePath)
+    const ignoredPaths = new Set(
+      ['node_modules', '.next', 'dist', '.env', '.env.local'].map((ignored) =>
+        path.join(resolvedTemplatePath, ignored),
+      ),
+    )
 
     try {
-      let envContents = await fs.readFile(
-        path.join(projectFolder, '.env.example'),
-        { encoding: 'utf8' },
+      await fs.cp(resolvedTemplatePath, projectPath, {
+        recursive: true,
+        filter: (source) => !ignoredPaths.has(source),
+      })
+    } catch (error: any) {
+      this.exitWithError(
+        `something went wrong while cloning a local template. Check if you have read permissions to ${resolvedTemplatePath} and try again.`,
+        error,
       )
-
-      envContents = envContents.replace(
-        'NEXT_PUBLIC_STARLIGHT_WORKSPACE=replace_me',
-        `NEXT_PUBLIC_STARLIGHT_WORKSPACE=${workspace.id}`,
-      )
-
-      try {
-        await fs.writeFile(path.join(projectFolder, '.env'), envContents, {
-          encoding: 'utf8',
-        })
-      } catch {
-        this.warn(
-          "something went wrong while writing your project's .env file, skipping Starlight SDK setup.",
-        )
-      }
-    } catch {
-      this.warn('.env.example file not found, skipping Starlight SDK setup.')
     }
 
-    // Show usage instructions
-    this.log()
-    this.log(`✅ ${args.template} template cloned successfully.`)
-    this.log()
-    this.log(
-      'To start working, enter its folder and run the development server:',
+    await fs.rm(path.join(projectPath, '.git'), {
+      recursive: true,
+      force: true,
+    })
+
+    ux.action.stop()
+  }
+
+  private isGitRepositoryUrl(string: string) {
+    return (
+      string.startsWith('http://') ||
+      string.startsWith('https://') ||
+      string.startsWith('git@')
     )
-    this.log()
-    this.log(`$ cd ${projectName}`)
-    this.log('$ npm run dev')
+  }
+
+  private async cloneRepository(
+    url: string,
+    projectPath: string,
+  ): Promise<void> {
+    ux.action.start('Cloning template repository')
+
+    try {
+      await execa('git', ['clone', '--depth=1', url, projectPath])
+    } catch (error: any) {
+      this.exitWithError(
+        'something went wrong while cloning the template repository. Check if git is installed correctly and try again.',
+        error,
+      )
+    }
+
+    await fs.rm(path.join(projectPath, '.git'), {
+      recursive: true,
+      force: true,
+    })
+
+    ux.action.stop()
+  }
+
+  private async initializeGit(projectPath: string): Promise<void> {
+    ux.action.start('Creating first git commit')
+
+    try {
+      await execa('git', ['init'], { cwd: projectPath })
+      await execa('git', ['add', '-A'], { cwd: projectPath })
+      await execa('git', ['commit', '-m "Initial commit"'], {
+        cwd: projectPath,
+      })
+    } catch (error: any) {
+      this.exitWithError('something went wrong while running git init.', error)
+    }
+
+    ux.action.stop()
   }
 }

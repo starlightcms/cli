@@ -1,21 +1,45 @@
+export type TemplateParameters = {
+  project: {
+    name: string
+  }
+  organization: {
+    id: number
+    title: string
+    slug: string
+  }
+  workspace: {
+    id: number
+    title: string
+    slug: string
+  }
+}
+
+export type TemplateParameterMap = {
+  [Key in keyof TemplateParameters]: (keyof TemplateParameters[Key])[]
+}
+
 export type ReplaceMap = {
   [searchValue: string]: string
 }
 
-export type ReplaceAction = {
-  type: 'replace'
+export interface TemplateAction<Type extends string> {
+  type: Type
+}
+
+export interface ReplaceAction extends TemplateAction<'replace'> {
   target: string
   replace: ReplaceMap
 }
 
-export type CopyAction = {
-  type: 'copy'
+export interface CopyAction extends TemplateAction<'copy'> {
   file: string
   to: string
-  replace?: ReplaceMap[]
+  replace?: ReplaceMap
 }
 
-export type TemplateAction = CopyAction | ReplaceAction
+export type TemplateActions = CopyAction | ReplaceAction
+
+export type TemplateActionTypes = TemplateActions['type']
 
 export type TemplateMetadata = {
   name: string
@@ -24,5 +48,5 @@ export type TemplateMetadata = {
   url?: string
   preview?: string
   instructions?: string
-  actions?: TemplateAction[]
+  actions?: TemplateAction<any>[]
 }
