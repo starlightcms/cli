@@ -276,7 +276,7 @@ will warn you in case the chosen template doesn't have a TypeScript version.`
       strip: 3,
       // We only want to extract the files of the selected template.
       filter: (path) => {
-        return path.startsWith(`web-templates-main/templates/${template}`)
+        return path.startsWith(`web-templates-main/templates/${template}/`)
       },
     })
     ux.action.stop()
