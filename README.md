@@ -18,7 +18,7 @@ $ npm install -g @starlightcms/cli
 $ starlight COMMAND
 running command...
 $ starlight (--version)
-@starlightcms/cli/0.1.4 darwin-arm64 node-v16.16.0
+@starlightcms/cli/0.2.0 darwin-arm64 node-v16.16.0
 $ starlight --help [COMMAND]
 USAGE
   $ starlight COMMAND
@@ -40,6 +40,7 @@ USAGE
 * [`starlight plugins:uninstall PLUGIN...`](#starlight-pluginsuninstall-plugin-1)
 * [`starlight plugins:uninstall PLUGIN...`](#starlight-pluginsuninstall-plugin-2)
 * [`starlight plugins update`](#starlight-plugins-update)
+* [`starlight template validate [FOLDER]`](#starlight-template-validate-folder)
 
 ## `starlight create TEMPLATE [PROJECTNAME]`
 
@@ -50,19 +51,19 @@ USAGE
   $ starlight create TEMPLATE [PROJECTNAME] [--typescript]
 
 ARGUMENTS
-  TEMPLATE     Web Template name or git repository URL
-  PROJECTNAME  The name of the project (and folder) that will be created
+  TEMPLATE     Web Template name, git repository URL or local directory path
+  PROJECTNAME  The name of the project (and directory) that will be created
 
 FLAGS
-  --typescript  Clone the TypeScript version (if available)
+  --typescript  Clone the TypeScript version of a Web Template (if available)
 
 DESCRIPTION
   Create an application using a template.
 
   This command creates a new application using an existing template by cloning
-  the template repository locally and configuring a Starlight SDK client using
-  environment variables. Templates can be either a Web Template name or a git
-  repository URL (starting with https:// or git://).
+  its files locally and configuring it using metadata defined in the template.
+  Templates can be fetched from the Web Templates repository, git repositories,
+  or from a local directory.
 
   Web Templates are official Starlight web application templates, learn more at:
   https://github.com/starlightcms/web-templates
@@ -80,12 +81,16 @@ EXAMPLES
 
     $ starlight create https://github.com/my-org/example-template
 
-  Clone the TypeScript version of the template (if available)
+  Create an application using a local template
+
+    $ starlight create ~/my-company/starlight-templates/example-template
+
+  Clone the TypeScript version of a Web Template (if available)
 
     $ starlight create nextjs --typescript
 ```
 
-_See code: [dist/commands/create.ts](https://github.com/lucas-varela/cli/blob/v0.1.4/dist/commands/create.ts)_
+_See code: [dist/commands/create.ts](https://github.com/lucas-varela/cli/blob/v0.2.0/dist/commands/create.ts)_
 
 ## `starlight help [COMMANDS]`
 
@@ -122,7 +127,7 @@ EXAMPLES
   $ starlight login
 ```
 
-_See code: [dist/commands/login.ts](https://github.com/lucas-varela/cli/blob/v0.1.4/dist/commands/login.ts)_
+_See code: [dist/commands/login.ts](https://github.com/lucas-varela/cli/blob/v0.2.0/dist/commands/login.ts)_
 
 ## `starlight logout`
 
@@ -139,7 +144,7 @@ EXAMPLES
   $ starlight logout
 ```
 
-_See code: [dist/commands/logout.ts](https://github.com/lucas-varela/cli/blob/v0.1.4/dist/commands/logout.ts)_
+_See code: [dist/commands/logout.ts](https://github.com/lucas-varela/cli/blob/v0.2.0/dist/commands/logout.ts)_
 
 ## `starlight plugins`
 
@@ -386,4 +391,24 @@ DESCRIPTION
 ```
 
 _See code: [@oclif/plugin-plugins](https://github.com/oclif/plugin-plugins/blob/v3.2.0/src/commands/plugins/update.ts)_
+
+## `starlight template validate [FOLDER]`
+
+validate a template's metadata
+
+```
+USAGE
+  $ starlight template validate [FOLDER]
+
+ARGUMENTS
+  FOLDER  template folder to validade
+
+DESCRIPTION
+  validate a template's metadata
+
+EXAMPLES
+  $ starlight template validate
+```
+
+_See code: [dist/commands/template/validate.ts](https://github.com/lucas-varela/cli/blob/v0.2.0/dist/commands/template/validate.ts)_
 <!-- commandsstop -->
