@@ -20,7 +20,7 @@
     "@inquirer/prompts": "^3.0.2",
     "@oclif/core": "^2",
     "@oclif/plugin-help": "^5",
-    "@oclif/plugin-plugins": "^3.1.8",
+    "@oclif/plugin-plugins": "^3.5.0",
     "@oclif/plugin-warn-if-update-available": "^2.0.46",
     "chalk": "^4.1.2",
     "execa": "^5.1.1",
