@@ -1,9 +1,8 @@
-import { Args } from '@oclif/core'
+import { Args, ux } from '@oclif/core'
 import { BaseCommand } from '../../BaseCommand'
-import { ValidationError } from 'yup'
-import { TemplateMetadata } from '../../types/template'
 import {
-  getTemplateMetadata,
+  getDotStarlightPath,
+  TemplateValidationError,
   validateTemplateMetadata,
 } from '../../utils/template'
 
@@ -22,51 +21,39 @@ export default class Validate extends BaseCommand {
   public async run(): Promise<void> {
     const { args } = await this.parse(Validate)
 
-    const templateJson = await this.getTemplateMetadata(args.folder)
-    await this.validateTemplateMetadata(templateJson)
-  }
+    const dotStarlightPath = getDotStarlightPath(args.folder)
 
-  private async getTemplateMetadata(folder?: string): Promise<any> {
     try {
-      return await getTemplateMetadata(folder)
+      ux.action.start(
+        `➡️ Validating template metadata (.starlight/template.json)`,
+      )
+
+      const templateFile = await validateTemplateMetadata(dotStarlightPath)
+
+      ux.action.stop(`done.`)
+
+      this.log(`✅ ${templateFile.name} template is valid.`)
     } catch (error: any) {
       if (error.code === 'ENOENT') {
         this.log(
           `🔴 Template metadata file not found at ${error.path}. Are you sure this folder contains a Starlight template?`,
         )
         this.exit(1)
-      }
+      } else if (error instanceof TemplateValidationError) {
+        ux.action.stop('failed')
 
-      this.exitWithError(
-        `something went wrong while reading the template metadata file (.starlight/template.json). Check if its JSON syntax is correct and try again.`,
-        error,
-      )
-    }
-  }
-
-  private async validateTemplateMetadata(
-    templateMetadata: unknown,
-  ): Promise<TemplateMetadata> {
-    try {
-      const data = await validateTemplateMetadata(templateMetadata)
-
-      this.log('🟢 Template metadata (.starlight/template.json) is valid.')
-
-      return data
-    } catch (error: any) {
-      if (error instanceof ValidationError) {
-        this.log('🔴 Template metadata (.starlight/template.json) is invalid:')
+        this.log(`❌ ${error.file} is invalid:`)
         this.log()
 
-        for (const validationError of error.inner) {
-          this.log(`➡️ ${validationError.message}`)
+        for (const validationError of error.validationError.inner) {
+          this.log(`▶️ ${validationError.message}`)
         }
 
         this.exit(1)
       }
 
       this.exitWithError(
-        'something went wrong while validating the template metadata.',
+        `something went wrong while validating the template metadata (.starlight/template.json). Check if its JSON syntax is correct and try again.`,
         error,
       )
     }

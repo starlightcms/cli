@@ -1,8 +1,9 @@
-import { CopyAction } from '../../types/template'
+import { CopyAction } from '../../../types/template'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { ActionRunner } from './index'
-import { replaceParameters } from '../template'
+
+import { replaceParameters } from '../../parameters'
 
 export const copy: ActionRunner<CopyAction> = async (
   action,

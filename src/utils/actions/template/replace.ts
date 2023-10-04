@@ -1,8 +1,9 @@
-import { ReplaceAction } from '../../types/template'
+import { ReplaceAction } from '../../../types/template'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { ActionRunner } from './index'
-import { replaceParameters } from '../template'
+
+import { replaceParameters } from '../../parameters'
 
 export const replace: ActionRunner<ReplaceAction> = async (
   action,

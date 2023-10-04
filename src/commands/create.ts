@@ -14,15 +14,14 @@ import { installDependencies } from '../utils/install'
 import { selectOrganization, selectWorkspace } from '../utils/admin'
 import execa from 'execa'
 import {
-  getTemplateMetadata,
-  makeParameterMap,
-  replaceParameters,
+  getDotStarlightPath,
   runActions,
   validateTemplateMetadata,
 } from '../utils/template'
-import { TemplateMetadata, TemplateParameters } from '../types/template'
+import { TemplateFile, TemplateParameters } from '../types/template'
 import { ValidationError } from 'yup'
 import chalk from 'chalk'
+import { makeParameterMap, replaceParameters } from '../utils/parameters'
 
 export default class Create extends BaseCommand {
   static summary = 'Create an application using a template.'
@@ -89,6 +88,7 @@ will warn you in case the chosen template doesn't have a TypeScript version.`
       args.template,
       args.projectName,
     )
+    const dotStarlightPath = getDotStarlightPath(projectPath)
 
     if (await this.isLocalDirectory(args.template)) {
       // User wants to clone a local template
@@ -107,13 +107,13 @@ will warn you in case the chosen template doesn't have a TypeScript version.`
     await installDependencies(projectPath)
     ux.action.stop()
 
-    let templateMetadata: TemplateMetadata | null = null
+    let templateMetadata: TemplateFile | null = null
     let templateParameters: TemplateParameters | null = null
 
     // Setup Starlight SDK if template metadata is present and valid
     try {
-      const loadedMetadata = await getTemplateMetadata(projectPath)
-      templateMetadata = await validateTemplateMetadata(loadedMetadata)
+      // TODO: verificar se essa chamada continua funcionando
+      templateMetadata = await validateTemplateMetadata(dotStarlightPath)
 
       this.log()
       this.log('🌟 The included Starlight SDK should request content from:')

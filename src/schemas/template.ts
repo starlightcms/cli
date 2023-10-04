@@ -1,47 +1,23 @@
-import { array, lazy, object, ObjectSchema, string, StringSchema } from 'yup'
 import {
-  CopyAction,
-  ReplaceAction,
-  TemplateParameterMap,
-  TemplateActions,
+  array,
+  lazy,
+  number,
+  object,
+  ObjectSchema,
+  string,
+  StringSchema,
+} from 'yup'
+import {
+  TemplateAction,
+  TemplateActionMap,
   TemplateActionTypes,
-  TemplateMetadata,
+  TemplateFile,
+  TemplateFileValidationContext,
 } from '../types/template'
-
-const validParameters: TemplateParameterMap = {
-  project: ['name'],
-  organization: ['title', 'slug', 'id'],
-  workspace: ['title', 'slug', 'id'],
-}
-
-const getInvalidParameters = (replacement: string): string[] => {
-  return [...replacement.matchAll(/(\$\w+?\.\w+)/g)]
-    .map((match) => match[0].replace('$', ''))
-    .filter((match) => {
-      const [group, parameter] = match.split('.')
-
-      return (
-        !Object.prototype.hasOwnProperty.call(validParameters, group) ||
-        !validParameters[group as keyof typeof validParameters].includes(
-          // Not sure why, but TS types validParameters[group] as "never", so...
-          // It might be a bug in TypeScript, but even if it isn't,
-          // this assertion is pretty safe.
-          parameter as never,
-        )
-      )
-    })
-}
-
-const stringWithParametersSchema = string().test(
-  'template-parameters',
-  ({ path, value }) =>
-    `${path} has invalid parameters: ${getInvalidParameters(value).join(
-      ', ',
-    )}.`,
-  (value) => {
-    return typeof value === 'string' && getInvalidParameters(value).length === 0
-  },
-)
+import fs from 'node:fs/promises'
+import path from 'node:path'
+import { constants as fsConstants } from 'node:fs'
+import { stringWithParametersSchema } from '../utils/parameters'
 
 const makeReplaceMap = (required = false) =>
   lazy((value = {}) => {
@@ -54,48 +30,86 @@ const makeReplaceMap = (required = false) =>
     return required ? schema.required() : schema
   })
 
-const replaceActionSchema: ObjectSchema<ReplaceAction> = object({
-  type: string().oneOf(['replace']).required(),
-  target: string().required(),
-  replace: makeReplaceMap(true),
-})
+export type ActionSchemaMap<
+  ActionType extends TemplateActionTypes = TemplateActionTypes,
+> = Record<ActionType, ObjectSchema<TemplateActionMap[ActionType]>>
 
-const copyActionSchema: ObjectSchema<CopyAction> = object({
-  type: string().oneOf(['copy']).required(),
-  file: string().required(),
-  to: string().required(),
-  replace: makeReplaceMap(),
-})
+const actionSchemas: ActionSchemaMap = {
+  copy: object({
+    type: string().oneOf(['copy']).required(),
+    file: string().required(),
+    to: string().required(),
+    replace: makeReplaceMap(),
+  }),
+  replace: object({
+    type: string().oneOf(['replace']).required(),
+    target: string().required(),
+    replace: makeReplaceMap(true),
+  }),
+  migrate: object({
+    type: string().oneOf(['migrate']).required(),
+    file: string<string, TemplateFileValidationContext>()
+      .required()
+      .test(
+        'schema-exists',
+        ({ path }) => `${path} is invalid: schema file doesn't exist`,
+        async (file, context) => {
+          if (!context.options.context?.basePath) {
+            throw new Error(
+              `context.basePath is undefined, did you forget to pass a context to the validate() method?`,
+            )
+          }
 
-const actionTypes = new Set<TemplateActionTypes>(['copy', 'replace'])
+          try {
+            await fs.access(
+              path.resolve(context.options.context.basePath, file),
+              fsConstants.R_OK,
+            )
+            return true
+          } catch {
+            return false
+          }
+        },
+      ),
+  }),
+}
 
-const templateActionSchema = lazy((action: TemplateActions | undefined) => {
-  // Invalidate the action if it is an empty object or an action of an unknown
-  // type. Since we're returning a schema that is technically not a valid
-  // TemplateAction, we assert it as a valid one (like a CopyAction)
-  // so TypeScript don't scream at us.
-  if (!action || !actionTypes.has(action.type)) {
+const templateActionSchema = lazy((action: TemplateAction | undefined) => {
+  // Invalidate the action if it is an empty object or an action of an unknown type.
+  if (
+    !action ||
+    !Object.prototype.hasOwnProperty.call(actionSchemas, action.type)
+  ) {
     return object({
-      type: string()
-        .oneOf([...actionTypes])
-        .required(),
-    }) as ObjectSchema<CopyAction>
+      type: string().oneOf(Object.keys(actionSchemas)).required(),
+    })
   }
 
-  switch (action.type) {
-    case 'replace':
-      return replaceActionSchema
-    case 'copy':
-      return copyActionSchema
-  }
+  return actionSchemas[action.type as keyof typeof actionSchemas]
 })
 
-export const templateMetadataSchema: ObjectSchema<TemplateMetadata> = object({
+const actionsSchema = array()
+  .of(templateActionSchema)
+  .test({
+    name: 'actions-max-one-migration',
+    message: ({ path }) =>
+      `${path} array is invalid: can't have more than one action of type "migrate"`,
+    test: (value) =>
+      !value ||
+      value.length === 0 ||
+      value.filter((action) => action.type === 'migrate').length <= 1,
+  })
+
+export const templateFileSchema: ObjectSchema<
+  TemplateFile,
+  TemplateFileValidationContext
+> = object({
+  version: number().required(),
   name: string().required(),
   description: string(),
   author: string(),
   url: string(),
   preview: string(),
   instructions: stringWithParametersSchema,
-  actions: array().of(templateActionSchema),
+  actions: actionsSchema,
 })
