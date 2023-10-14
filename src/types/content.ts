@@ -15,6 +15,7 @@ export interface MediaObjectDescriptor extends ContentDescriptor {
 
 export interface SingletonDescriptor extends ContentDescriptor {
   type: 'singleton'
+  slug: string
   data: SingletonContentMutation
 }
 
@@ -24,10 +25,17 @@ export interface EntryDescriptor extends ContentDescriptor {
   data: EntryMutation
 }
 
+export interface CollectionItemsDescriptor extends ContentDescriptor {
+  type: 'collectionItems'
+  collection: string
+  items: string[]
+}
+
 export type ContentDescriptorMap = {
   entry: EntryDescriptor
   singleton: SingletonDescriptor
   media: MediaObjectDescriptor
+  collectionItems: CollectionItemsDescriptor
 }
 
 export type ContentDescriptorTypes = keyof ContentDescriptorMap

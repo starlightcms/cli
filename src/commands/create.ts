@@ -5,23 +5,20 @@ import { x as tarExtract } from 'tar'
 import * as path from 'node:path'
 import * as os from 'node:os'
 import * as stream from 'node:stream/promises'
-import { createWriteStream } from 'node:fs'
+import { constants as fsConstants, createWriteStream } from 'node:fs'
 import * as fs from 'node:fs/promises'
-import { constants as fsConstants } from 'node:fs'
 import { BaseCommand } from '../BaseCommand'
 import { octokit } from '../utils/github'
 import { installDependencies } from '../utils/install'
 import { selectOrganization, selectWorkspace } from '../utils/admin'
 import execa from 'execa'
-import {
-  getDotStarlightPath,
-  runActions,
-  validateTemplateMetadata,
-} from '../utils/template'
+import { validateTemplateMetadata } from '../utils/template'
 import { TemplateFile, TemplateParameters } from '../types/template'
 import { ValidationError } from 'yup'
 import chalk from 'chalk'
 import { makeParameterMap, replaceParameters } from '../utils/parameters'
+import { runTemplateActions } from '../utils/actions/template'
+import { getDotStarlightPath } from '../utils/fs'
 
 export default class Create extends BaseCommand {
   static summary = 'Create an application using a template.'
@@ -112,7 +109,6 @@ will warn you in case the chosen template doesn't have a TypeScript version.`
 
     // Setup Starlight SDK if template metadata is present and valid
     try {
-      // TODO: verificar se essa chamada continua funcionando
       templateMetadata = await validateTemplateMetadata(dotStarlightPath)
 
       this.log()
@@ -127,7 +123,12 @@ will warn you in case the chosen template doesn't have a TypeScript version.`
       )
 
       ux.action.start('Running template actions')
-      await runActions(templateMetadata, projectPath, templateParameters)
+      await runTemplateActions(
+        templateMetadata,
+        projectPath,
+        templateParameters,
+        this,
+      )
       ux.action.stop()
     } catch (error: any) {
       if (error.code === 'ENOENT') {

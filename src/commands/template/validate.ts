@@ -1,10 +1,10 @@
 import { Args, ux } from '@oclif/core'
 import { BaseCommand } from '../../BaseCommand'
 import {
-  getDotStarlightPath,
   TemplateValidationError,
   validateTemplateMetadata,
 } from '../../utils/template'
+import { getDotStarlightPath } from '../../utils/fs'
 
 export default class Validate extends BaseCommand {
   static description = "validate a template's metadata"

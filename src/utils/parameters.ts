@@ -1,27 +1,39 @@
+import structuredClone from '@ungap/structured-clone'
 import { TemplateParameterMap, TemplateParameters } from '../types/template'
 import { object, string } from 'yup'
 import { Organization, Workspace } from '../types/adminApi'
+import { ContentDescriptorMap } from '../types/content'
 
-/* Parameters */
-const parameterRegex = /(\${\w+?\.\w+})/g
-const parameterReplacementRegex = /^\${(.+)}$/
+export type ContentMetadata = {
+  id: number
+  slug: string
+}
+
+export type ContentBag = Map<
+  keyof ContentDescriptorMap,
+  Map<string, ContentMetadata>
+>
+
+const matcherRegex = /([#$@]){(\w+?)\.(.+?)}/g
+const parameterMatcherRegex = /(\$){(\w+?)\.(.+?)}/g
+const referenceMatcherRegex = /([#@]){(\w+?)\.(.+?)}/g
 const validParameters: TemplateParameterMap = {
   project: ['name'],
   organization: ['title', 'slug', 'id'],
   workspace: ['title', 'slug', 'id'],
 }
-
-export const getParametersFromString = (string: string): string[] => {
-  return [...string.matchAll(parameterRegex)].map((match) =>
-    match[0].replace(parameterReplacementRegex, '$1'),
-  )
-}
+const validReferenceTypes = new Set([
+  'entry',
+  'media',
+  'singleton',
+  'collection',
+])
 
 const getInvalidParameters = (string: string): string[] => {
-  return [...string.matchAll(parameterRegex)]
-    .map((match) => match[0].replace(parameterReplacementRegex, '$1'))
+  return [...string.matchAll(parameterMatcherRegex)]
     .filter((match) => {
-      const [group, parameter] = match.split('.')
+      const group = match[2]
+      const parameter = match[3]
 
       return (
         !Object.prototype.hasOwnProperty.call(validParameters, group) ||
@@ -33,26 +45,15 @@ const getInvalidParameters = (string: string): string[] => {
         )
       )
     })
+    .map((match) => match[0])
 }
 
-/* Relations */
-const relationRegex = /(@{\w+?\..+})/g
-const relationReplacementRegex = /^@{(.+)}$/
-const validRelationTypes = new Set([
-  'entry',
-  'media',
-  'singleton',
-  'collection',
-])
-
-const getInvalidRelations = (string: string): string[] => {
-  return [...string.matchAll(relationRegex)]
-    .map((match) => match[0].replace(relationReplacementRegex, '$1'))
+const getInvalidReferences = (string: string): string[] => {
+  return [...string.matchAll(referenceMatcherRegex)]
     .filter((match) => {
-      const [, type] = match.match(/^(\w+?)\.(.+)$/)!
-
-      return !validRelationTypes.has(type)
+      return !validReferenceTypes.has(match[2])
     })
+    .map((match) => match[0])
 }
 
 const recursivelyTestStrings = (
@@ -81,10 +82,7 @@ const recursivelyTestStrings = (
       value !== null &&
       (Array.isArray(value) || Object.keys(value).length > 0)
     ) {
-      const inner = recursivelyTestStrings(
-        value as Record<string, unknown>,
-        test,
-      )
+      const inner = recursivelyTestStrings(value, test)
 
       if (inner.length > 0) return inner
     }
@@ -107,14 +105,14 @@ export const stringWithParametersSchema = string()
     },
   )
   .test(
-    'template-string-relations',
+    'template-string-references',
     ({ path, value }) =>
-      `${path} has invalid relations: ${getInvalidRelations(value).join(
+      `${path} has invalid references: ${getInvalidReferences(value).join(
         ', ',
       )}.`,
     (value) => {
       return (
-        typeof value === 'string' && getInvalidRelations(value).length === 0
+        typeof value === 'string' && getInvalidReferences(value).length === 0
       )
     },
   )
@@ -132,34 +130,16 @@ export const objectWithDeepStringParametersSchema = object()
     },
   )
   .test(
-    'template-object-relations',
+    'template-object-references',
     ({ path, value }) =>
-      `${path} has invalid relations in its structure: ${recursivelyTestStrings(
+      `${path} has invalid references in its structure: ${recursivelyTestStrings(
         value,
-        getInvalidRelations,
+        getInvalidReferences,
       ).join(', ')}.`,
     (value) => {
-      return recursivelyTestStrings(value, getInvalidRelations).length === 0
+      return recursivelyTestStrings(value, getInvalidReferences).length === 0
     },
   )
-
-export const replaceParameters = (
-  string: string,
-  parameters: TemplateParameters,
-): string => {
-  const foundParameters = getParametersFromString(string)
-
-  if (foundParameters.length > 0) {
-    for (const foundParameter of foundParameters) {
-      const [group, parameter] = foundParameter.split('.')
-      const value =
-        parameters[group as keyof TemplateParameters][parameter as never]
-      string = string.replace(`$${foundParameter}`, value)
-    }
-  }
-
-  return string
-}
 
 export const makeParameterMap = (
   projectName: string,
@@ -173,4 +153,92 @@ export const makeParameterMap = (
     organization,
     workspace,
   }
+}
+
+const getParametersFromString = (string: string): string[][] => {
+  return [...string.matchAll(matcherRegex)].map((match) => [
+    match[1],
+    match[2],
+    match[3],
+  ])
+}
+
+export const replaceParameters = (
+  string: string,
+  parameters: TemplateParameters,
+  contentBag?: ContentBag,
+): string => {
+  const matchedParameters = getParametersFromString(string)
+
+  if (matchedParameters.length > 0) {
+    for (const matchedParameter of matchedParameters) {
+      const [matcherSymbol, group, slug] = matchedParameter
+      let value
+
+      if (matcherSymbol === '@' || matcherSymbol === '#') {
+        if (!contentBag) {
+          throw new Error(
+            `Parameter ${matcherSymbol}{${group}.${slug}} was used in a context where content metadata is unavailable. Only template parameters (parameters starting with $) are allowed here.`,
+          )
+        }
+
+        const contentMetadata = contentBag!
+          .get(group as keyof ContentDescriptorMap)!
+          .get(slug)
+
+        if (!contentMetadata) {
+          throw new Error(
+            group === 'entry' && !slug.includes('.')
+              ? `No content metadata found for the ${matcherSymbol}{${group}.${slug}} parameter. Did you forget to include the model name before the entry slug, like in ${matcherSymbol}{entry.model-slug.entry-slug}? Also, make sure that the content you're trying to reference is being created **before** you try to refer to it.`
+              : `No content metadata found for the ${matcherSymbol}{${group}.${slug}} parameter. Content creation order matters, so make sure that the content you're trying to reference is being created **before** you try to refer to it.`,
+          )
+        }
+
+        value = contentMetadata[matcherSymbol === '@' ? 'slug' : 'id']
+      } else {
+        value = parameters[group as keyof TemplateParameters][slug as never]
+      }
+
+      string = string.replace(
+        `${matcherSymbol}{${group}.${slug}}`,
+        String(value),
+      )
+    }
+  }
+
+  return string
+}
+
+export const deeplyReplaceParameters = (
+  object: Record<string, unknown> | unknown[],
+  parameters: TemplateParameters,
+  contentBag?: ContentBag,
+): any => {
+  const cloned = structuredClone(object)
+  const isArray = Array.isArray(cloned)
+  const iterator = isArray ? cloned : Object.keys(cloned)
+
+  for (const item of iterator) {
+    if (!isArray && !Object.prototype.hasOwnProperty.call(cloned, item)) {
+      continue
+    }
+
+    const value = isArray ? item : cloned[item]
+    let replaced
+
+    if (typeof value === 'string') {
+      replaced = replaceParameters(value, parameters, contentBag)
+    } else if (
+      typeof value === 'object' &&
+      value !== null &&
+      (Array.isArray(value) || Object.keys(value).length > 0)
+    ) {
+      replaced = deeplyReplaceParameters(value, parameters, contentBag)
+    }
+
+    if (isArray) cloned[cloned.indexOf(value)] = replaced ?? value
+    else cloned[item] = replaced ?? value
+  }
+
+  return cloned
 }

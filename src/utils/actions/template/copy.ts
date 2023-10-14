@@ -1,11 +1,11 @@
 import { CopyAction } from '../../../types/template'
 import fs from 'node:fs/promises'
 import path from 'node:path'
-import { ActionRunner } from './index'
+import { TemplateActionRunner } from './index'
 
 import { replaceParameters } from '../../parameters'
 
-export const copy: ActionRunner<CopyAction> = async (
+export const copy: TemplateActionRunner<CopyAction> = async (
   action,
   rootFolder,
   parameters,

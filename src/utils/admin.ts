@@ -1,9 +1,9 @@
 import got, { HTTPError } from 'got'
 import { APIResourceResponse, Organization, Workspace } from '../types/adminApi'
 import { BaseCommand } from '../BaseCommand'
-import { select } from '@inquirer/prompts'
-
-export const ADMIN_API_URL = 'https://admin.starlightcms.io/v2'
+import { input, select } from '@inquirer/prompts'
+import kebabCase from 'lodash/kebabCase'
+import { ADMIN_API_URL } from '../constants'
 
 export const admin = got.extend({
   // We allow this instance to me mutated so other parts of the
@@ -17,7 +17,7 @@ export const selectOrganization = async (
 ): Promise<Organization> => {
   try {
     const response = await admin
-      .get('organizations')
+      .get('organizations?limit=100')
       .json<APIResourceResponse<Organization[]>>()
 
     return select({
@@ -61,6 +61,42 @@ export const selectWorkspace = async (
     if (error instanceof HTTPError) {
       command.exitWithError(
         `something went wrong while fetching ${organization.title}'s workspaces.`,
+        error,
+      )
+    }
+
+    throw error
+  }
+}
+
+export const createWorkspace = async (
+  command: BaseCommand,
+  organization: Organization,
+): Promise<Workspace> => {
+  const workspaceName = await input({
+    message: 'Workspace name:',
+  })
+
+  const workspaceSlug = await input({
+    message: 'Workspace slug:',
+    default: kebabCase(workspaceName),
+  })
+
+  try {
+    const response = await admin
+      .post(`organizations/${organization.slug}/workspaces`, {
+        json: {
+          title: workspaceName,
+          slug: workspaceSlug,
+        },
+      })
+      .json<APIResourceResponse<Workspace>>()
+
+    return response.data
+  } catch (error: any) {
+    if (error instanceof HTTPError) {
+      command.exitWithError(
+        `something went wrong while creating a workspace in the ${organization.title} organization.`,
         error,
       )
     }

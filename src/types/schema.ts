@@ -1,6 +1,11 @@
-// TODO: escrever função que migra conteúdo
-
-import { ModelMutation, SingletonStructureMutation } from './mutations'
+import {
+  CollectionMutation,
+  FormMutation,
+  ModelCategoryMutation,
+  ModelMutation,
+  SingletonCategoryMutation,
+  SingletonStructureMutation,
+} from './mutations'
 
 export interface SchemaAction {
   type: string
@@ -8,20 +13,13 @@ export interface SchemaAction {
 
 export interface CreateAction extends SchemaAction {
   type: 'create'
-  entities: MutableEntity[]
+  entities: MutableEntity<unknown>[]
 }
 
-// TODO: é aqui que você pode importar conteúdo
-//  - criar entradas
-//  - adicionar conteúdo em singletons
-//  - adicionar itens em coleções
-//  - enviar arquivos de mídia
 export interface ImportAction extends SchemaAction {
   type: 'import'
   file: string
 }
-
-// TODO: ConfigureAction
 
 export type SchemaActionMap = {
   create: CreateAction
@@ -42,27 +40,46 @@ export type SchemaFileValidationContext = {
 
 /* Schema Entities */
 
-export interface MutableEntity {
+export interface MutableEntity<EntityData> {
   type: string
-  // TODO:
-  //  | 'modelCategory'
-  //  | 'singletonCategory'
-  //  | 'collection'
-  //  | 'form'
+  data: EntityData
 }
 
 export type MutableEntityMap = {
   model: MutableModelEntity
+  modelCategory: MutableModelCategoryEntity
   singleton: MutableSingletonEntity
+  singletonCategory: MutableSingletonCategoryEntity
+  collection: MutableCollectionEntity
+  form: MutableFormEntity
 }
 
 export type MutableEntityTypes = keyof MutableEntityMap
 
-export interface MutableModelEntity extends MutableEntity {
+export interface MutableModelEntity extends MutableEntity<ModelMutation> {
   type: 'model'
-  data: ModelMutation
 }
-export interface MutableSingletonEntity extends MutableEntity {
+
+export interface MutableModelCategoryEntity
+  extends MutableEntity<ModelCategoryMutation> {
+  type: 'modelCategory'
+}
+
+export interface MutableSingletonEntity
+  extends MutableEntity<SingletonStructureMutation> {
   type: 'singleton'
-  data: SingletonStructureMutation
+}
+
+export interface MutableSingletonCategoryEntity
+  extends MutableEntity<SingletonCategoryMutation> {
+  type: 'singletonCategory'
+}
+
+export interface MutableCollectionEntity
+  extends MutableEntity<CollectionMutation> {
+  type: 'collection'
+}
+
+export interface MutableFormEntity extends MutableEntity<FormMutation> {
+  type: 'form'
 }

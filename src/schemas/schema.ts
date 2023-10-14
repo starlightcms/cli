@@ -1,21 +1,21 @@
 /* eslint-disable camelcase */
 import { array, boolean, lazy, number, object, ObjectSchema, string } from 'yup'
 import {
+  MutableEntity,
+  MutableEntityMap,
+  MutableEntityTypes,
   SchemaAction,
   SchemaActionMap,
   SchemaActionTypes,
-  MutableEntity,
   SchemaFile,
-  MutableEntityTypes,
-  MutableEntityMap,
   SchemaFileValidationContext,
 } from '../types/schema'
-import { Field, FieldGroup } from '../types/mutations'
+import { FormField, ModelField } from '../types/mutations'
 import fs from 'node:fs/promises'
 import { constants as fsConstants } from 'node:fs'
 import path from 'node:path'
 
-const fieldSchema: ObjectSchema<Field> = object({
+const baseFieldSchema = object({
   title: string().required(),
   key: string().required(),
   type: string()
@@ -28,11 +28,32 @@ const fieldSchema: ObjectSchema<Field> = object({
   rules: object(),
 })
 
-const groupSchema: ObjectSchema<FieldGroup> = object({
-  title: string().required(),
-  type: string().oneOf(['group']).required(),
-  fields: array().of(fieldSchema).required(),
+const modelFieldSchema: ObjectSchema<ModelField> = baseFieldSchema.shape({
+  type: string()
+    .oneOf([
+      'title',
+      'slug',
+      'string',
+      'text',
+      'visual',
+      'html',
+      'media',
+      'boolean',
+      'relation',
+    ])
+    .required(),
 })
+
+const formFieldSchema: ObjectSchema<FormField> = baseFieldSchema.shape({
+  is_identifier: boolean(),
+})
+
+const makeGroupOf = (fieldType: ObjectSchema<any>) =>
+  object({
+    title: string().required(),
+    type: string().oneOf(['group']).required(),
+    fields: array().of(fieldType).required(),
+  })
 
 type MutableEntitySchemaMap<
   EntityType extends MutableEntityTypes = MutableEntityTypes,
@@ -45,7 +66,16 @@ const mutableEntities: MutableEntitySchemaMap = {
       title: string().required(),
       slug: string().required(),
       preview_url: string(),
-      groups: array().of(groupSchema).required(),
+      // FIXME: add test: models should have one title field and one slug field
+      groups: array().of(makeGroupOf(modelFieldSchema)).required(),
+    }).required(),
+  }),
+  modelCategory: object({
+    type: string().oneOf(['modelCategory']).required(),
+    data: object({
+      model: string().required(),
+      title: string().required(),
+      slug: string().required(),
     }).required(),
   }),
   singleton: object({
@@ -54,24 +84,51 @@ const mutableEntities: MutableEntitySchemaMap = {
       title: string().required(),
       slug: string().required(),
       category: string().required(),
-      groups: array().of(groupSchema).required(),
+      groups: array().of(makeGroupOf(baseFieldSchema)).required(),
+    }).required(),
+  }),
+  singletonCategory: object({
+    type: string().oneOf(['singletonCategory']).required(),
+    data: object({
+      title: string().required(),
+      slug: string().required(),
+    }).required(),
+  }),
+  collection: object({
+    type: string().oneOf(['collection']).required(),
+    data: object({
+      title: string().required(),
+      slug: string().required(),
+      type: string().oneOf(['any', 'entry', 'media', 'singleton']).required(),
+    }).required(),
+  }),
+  form: object({
+    type: string().oneOf(['form']).required(),
+    data: object({
+      title: string().required(),
+      slug: string().required(),
+      groups: array().of(makeGroupOf(formFieldSchema)).required(),
     }).required(),
   }),
 }
 
-const mutableEntitySchema = lazy((entity: MutableEntity | undefined) => {
-  // Invalidate the entity if it is an empty object or an entity of an unknown type.
-  if (
-    !entity ||
-    !Object.prototype.hasOwnProperty.call(mutableEntities, entity.type)
-  ) {
-    return object({
-      type: string().oneOf(Object.keys(mutableEntities)).required(),
-    })
-  }
+const mutableEntitySchema = lazy(
+  (entity: MutableEntity<unknown> | undefined) => {
+    // Invalidate the entity if it is an empty
+    // object or an entity of an unknown type.
+    if (
+      !entity ||
+      !Object.prototype.hasOwnProperty.call(mutableEntities, entity.type)
+    ) {
+      return object({
+        type: string().oneOf(Object.keys(mutableEntities)).required(),
+        data: object(),
+      })
+    }
 
-  return mutableEntities[entity.type as keyof typeof mutableEntities]
-})
+    return mutableEntities[entity.type as keyof typeof mutableEntities]
+  },
+)
 
 type ActionSchemaMap<ActionType extends SchemaActionTypes = SchemaActionTypes> =
   Record<ActionType, ObjectSchema<SchemaActionMap[ActionType]>>

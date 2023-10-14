@@ -1,7 +1,5 @@
 /* eslint-disable camelcase */
 
-import { ModelMutation, SingletonStructureMutation } from './mutations'
-
 export type Model = {
   id: number
   title: string
@@ -10,6 +8,15 @@ export type Model = {
   created_at: string
   updated_at: string
   entry_count?: number
+}
+
+export interface ModelCategory {
+  id: number
+  title: string
+  slug: string
+  entry_count: number
+  created_at: string
+  updated_at: string
 }
 
 export interface Organization {
@@ -107,15 +114,13 @@ export interface Singleton<
   published_at: string
 }
 
-type Entity<Type extends string, Mutation> = {
-  type: Type
-  data: Mutation
-  // | 'model' - ok
-  // | 'modelCategory'
-  // | 'singleton' - ok
-  // | 'singletonCategory'
-  // | 'collection'
-  // | 'form'
+export interface SingletonCategory {
+  id: number
+  title: string
+  slug: string
+  singleton_count: number
+  created_at: string
+  updated_at: string
 }
 
 type MediaMeta = {
@@ -155,6 +160,21 @@ export interface MediaObject {
   updated_at: string
 }
 
-export type ModelEntity = Entity<'model', ModelMutation>
+export interface Collection {
+  id: number
+  title: string
+  slug: string
+  type: 'any' | 'entry' | 'media' | 'singleton'
+  item_count: number
+  created_at: string
+  updated_at: string
+}
 
-export type SingletonEntity = Entity<'singleton', SingletonStructureMutation>
+export interface Form {
+  id: number
+  title: string
+  slug: string
+  submission_count?: number
+  created_at: string
+  updated_at: string
+}

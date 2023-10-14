@@ -1,17 +1,11 @@
 import path from 'node:path'
-import fs from 'node:fs/promises'
-import {
-  MigrateAction,
-  TemplateActionTypes,
-  TemplateFile,
-  TemplateParameters,
-} from '../types/template'
+import { MigrateAction, TemplateFile } from '../types/template'
 import { templateFileSchema } from '../schemas/template'
 import { schemaFileSchema } from '../schemas/schema'
-import actionRunners from './actions/template'
 import { ImportAction, SchemaFile } from '../types/schema'
 import { contentFileSchema } from '../schemas/content'
 import { ValidationError } from 'yup'
+import { getJsonFromFile } from './fs'
 
 export class TemplateValidationError extends Error {
   public file: string
@@ -24,28 +18,10 @@ export class TemplateValidationError extends Error {
   }
 }
 
-export const getDotStarlightPath = (templateRootPath?: string): string => {
-  return path.join(
-    path.resolve(templateRootPath ?? process.cwd()),
-    '.starlight',
-  )
-}
-
-export const parseJsonFromFile = async (path: string): Promise<unknown> => {
-  return JSON.parse(await fs.readFile(path, 'utf8'))
-}
-
-export const getTemplateFile = async (
-  dotStarlightPath: string,
-  templateFile: string,
-): Promise<unknown> => {
-  return parseJsonFromFile(path.resolve(dotStarlightPath, templateFile))
-}
-
 export const validateTemplateMetadata = async (
   dotStarlightPath: string,
 ): Promise<TemplateFile> => {
-  const templateFileJson = await getTemplateFile(
+  const [templateFileJson] = await getJsonFromFile(
     dotStarlightPath,
     'template.json',
   )
@@ -78,12 +54,10 @@ export const validateTemplateMetadata = async (
   )
 
   if (migrateAction) {
-    const schemaFileJson = await getTemplateFile(
+    const [schemaFileJson, schemaFilePath] = await getJsonFromFile(
       dotStarlightPath,
       migrateAction.file,
     )
-
-    const schemaFilePath = path.resolve(dotStarlightPath, migrateAction.file)
     let schemaFile: SchemaFile
 
     try {
@@ -118,11 +92,7 @@ export const validateTemplateMetadata = async (
        * errors if they run a few validations in a row using files with
        * multiple errors.
        */
-      const contentFileJson = await getTemplateFile(
-        path.dirname(schemaFilePath),
-        importAction.file,
-      )
-      const contentFilePath = path.resolve(
+      const [contentFileJson, contentFilePath] = await getJsonFromFile(
         path.dirname(schemaFilePath),
         importAction.file,
       )
@@ -137,7 +107,7 @@ export const validateTemplateMetadata = async (
           stripUnknown: true,
           context: {
             // basePath is relative to the content file.
-            basePath: contentFilePath,
+            basePath: path.dirname(contentFilePath),
           },
         })
       } catch (error) {
@@ -152,25 +122,4 @@ export const validateTemplateMetadata = async (
   }
 
   return templateFile
-}
-
-export const runActions = async (
-  templateMetadata: TemplateFile,
-  rootFolder: string,
-  parameters: TemplateParameters,
-): Promise<void> => {
-  if (templateMetadata.actions && templateMetadata.actions.length > 0) {
-    for (const action of templateMetadata.actions) {
-      if (Object.prototype.hasOwnProperty.call(actionRunners, action.type)) {
-        // It's okay to disable this rule here. The action array order needs
-        // to be respected, so we can't run actions in parallel.
-        // eslint-disable-next-line no-await-in-loop
-        await actionRunners[action.type as TemplateActionTypes](
-          action,
-          rootFolder,
-          parameters,
-        )
-      }
-    }
-  }
 }

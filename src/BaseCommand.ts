@@ -6,7 +6,8 @@ import got, { HTTPError } from 'got'
 import { input, password } from '@inquirer/prompts'
 import chalk from 'chalk'
 import { LoginResponseData } from './types/adminApi'
-import { admin, ADMIN_API_URL } from './utils/admin'
+import { admin } from './utils/admin'
+import { ADMIN_API_URL } from './constants'
 
 type LoginMethod = 'password' | 'email-code'
 

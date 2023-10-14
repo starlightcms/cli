@@ -1,7 +1,14 @@
 /* eslint-disable camelcase */
-import { Entry, Model, Singleton } from './entities'
+import {
+  Collection,
+  Entry,
+  Form,
+  Model,
+  ModelCategory,
+  Singleton,
+} from './entities'
 
-export interface Field {
+export type Field = {
   title: string
   key: string
   type: 'string' | 'text' | 'visual' | 'html' | 'media' | 'boolean' | 'relation'
@@ -14,14 +21,26 @@ export interface Field {
   }
 }
 
-export interface FieldGroup {
+export type ModelField = Omit<Field, 'type'> & {
+  type: Field['type'] | 'title' | 'slug'
+}
+
+export type FormField = Field & {
+  is_identifier?: boolean
+}
+
+export interface FieldGroup<FieldType = Field> {
   title: string
   type: 'group'
-  fields: Field[]
+  fields: FieldType[]
 }
 
 export type ModelMutation = Pick<Model, 'title' | 'slug' | 'preview_url'> & {
-  groups: FieldGroup[]
+  groups: FieldGroup<ModelField>[]
+}
+
+export type ModelCategoryMutation = Pick<ModelCategory, 'title' | 'slug'> & {
+  model: string
 }
 
 export type SingletonStructureMutation = Pick<Singleton, 'title' | 'slug'> & {
@@ -30,6 +49,11 @@ export type SingletonStructureMutation = Pick<Singleton, 'title' | 'slug'> & {
 }
 
 export type SingletonContentMutation = Pick<Singleton, 'data'>
+
+export type SingletonCategoryMutation = {
+  title: string
+  slug: string
+}
 
 export type EntryMutation = Pick<Entry, 'data'> & {
   draft?: boolean
@@ -40,4 +64,10 @@ export type MediaObjectMutation = {
   title: string
   alt?: string
   description?: string
+}
+
+export type CollectionMutation = Pick<Collection, 'title' | 'slug' | 'type'>
+
+export type FormMutation = Pick<Form, 'title' | 'slug'> & {
+  groups: FieldGroup<FormField>[]
 }
