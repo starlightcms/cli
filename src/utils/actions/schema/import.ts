@@ -27,6 +27,7 @@ export const importAction: SchemaActionRunner<ImportAction> = async (
     ['entry', new Map()],
     ['singleton', new Map()],
     ['media', new Map()],
+    ['collection', new Map()],
   ])
 
   for (const contentDescriptor of contentFile.content) {

@@ -1,10 +1,9 @@
 import { TemplateParameters } from '../../../../types/template'
 import {
   ContentDescriptor,
-  ContentDescriptorMap,
   ContentDescriptorTypes,
 } from '../../../../types/content'
-import { ContentBag, ContentMetadata } from '../../../parameters'
+import { ContentBag, ContentMetadata, ReferenceType } from '../../../parameters'
 import { entryImporter } from './entry'
 import { singletonImporter } from './singleton'
 import { mediaImporter } from './media'
@@ -16,7 +15,7 @@ export type ContentImporter<Descriptor extends ContentDescriptor> = (
   contentBag: ContentBag,
   contentFileFolder: string,
 ) => Promise<{
-  type: keyof ContentDescriptorMap
+  type: ReferenceType
   slug: string
   metadata: ContentMetadata
 } | null>

@@ -2,17 +2,15 @@ import structuredClone from '@ungap/structured-clone'
 import { TemplateParameterMap, TemplateParameters } from '../types/template'
 import { object, string } from 'yup'
 import { Organization, Workspace } from '../types/adminApi'
-import { ContentDescriptorMap } from '../types/content'
 
 export type ContentMetadata = {
   id: number
   slug: string
 }
 
-export type ContentBag = Map<
-  keyof ContentDescriptorMap,
-  Map<string, ContentMetadata>
->
+export type ReferenceType = 'entry' | 'singleton' | 'media' | 'collection'
+
+export type ContentBag = Map<ReferenceType, Map<string, ContentMetadata>>
 
 const matcherRegex = /([#$@]){(\w+?)\.(.+?)}/g
 const parameterMatcherRegex = /(\$){(\w+?)\.(.+?)}/g
@@ -183,7 +181,7 @@ export const replaceParameters = (
         }
 
         const contentMetadata = contentBag!
-          .get(group as keyof ContentDescriptorMap)!
+          .get(group as ReferenceType)!
           .get(slug)
 
         if (!contentMetadata) {

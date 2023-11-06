@@ -2,6 +2,8 @@ import { ContentImporter } from './index'
 import { CollectionItemsDescriptor } from '../../../../types/content'
 import { admin } from '../../../admin'
 import { deeplyReplaceParameters } from '../../../parameters'
+import { APIResourceResponse } from '../../../../types/adminApi'
+import { Collection } from '../../../../types/entities'
 
 export const collectionItemsImporter: ContentImporter<
   CollectionItemsDescriptor
@@ -23,5 +25,18 @@ export const collectionItemsImporter: ContentImporter<
     )
   }
 
-  return null
+  const response = await admin
+    .get(
+      `organizations/${parameters.organization.slug}/workspaces/${parameters.workspace.slug}/collections/${descriptor.collection}`,
+    )
+    .json<APIResourceResponse<Collection>>()
+
+  return {
+    type: 'collection',
+    slug: descriptor.collection,
+    metadata: {
+      id: response.data.id,
+      slug: response.data.slug,
+    },
+  }
 }
