@@ -18,7 +18,7 @@ $ npm install -g @starlightcms/cli
 $ starlight COMMAND
 running command...
 $ starlight (--version)
-@starlightcms/cli/0.3.1 darwin-arm64 node-v16.16.0
+@starlightcms/cli/0.4.0 darwin-arm64 node-v16.16.0
 $ starlight --help [COMMAND]
 USAGE
   $ starlight COMMAND
@@ -91,7 +91,7 @@ EXAMPLES
     $ starlight create nextjs --typescript
 ```
 
-_See code: [dist/commands/create.ts](https://github.com/lucas-varela/cli/blob/v0.3.1/dist/commands/create.ts)_
+_See code: [dist/commands/create.ts](https://github.com/lucas-varela/cli/blob/v0.4.0/dist/commands/create.ts)_
 
 ## `starlight help [COMMANDS]`
 
@@ -128,7 +128,7 @@ EXAMPLES
   $ starlight login
 ```
 
-_See code: [dist/commands/login.ts](https://github.com/lucas-varela/cli/blob/v0.3.1/dist/commands/login.ts)_
+_See code: [dist/commands/login.ts](https://github.com/lucas-varela/cli/blob/v0.4.0/dist/commands/login.ts)_
 
 ## `starlight logout`
 
@@ -145,7 +145,7 @@ EXAMPLES
   $ starlight logout
 ```
 
-_See code: [dist/commands/logout.ts](https://github.com/lucas-varela/cli/blob/v0.3.1/dist/commands/logout.ts)_
+_See code: [dist/commands/logout.ts](https://github.com/lucas-varela/cli/blob/v0.4.0/dist/commands/logout.ts)_
 
 ## `starlight plugins`
 
@@ -411,7 +411,7 @@ EXAMPLES
   $ starlight template import
 ```
 
-_See code: [dist/commands/template/import.ts](https://github.com/lucas-varela/cli/blob/v0.3.1/dist/commands/template/import.ts)_
+_See code: [dist/commands/template/import.ts](https://github.com/lucas-varela/cli/blob/v0.4.0/dist/commands/template/import.ts)_
 
 ## `starlight template validate [FOLDER]`
 
@@ -431,5 +431,5 @@ EXAMPLES
   $ starlight template validate
 ```
 
-_See code: [dist/commands/template/validate.ts](https://github.com/lucas-varela/cli/blob/v0.3.1/dist/commands/template/validate.ts)_
+_See code: [dist/commands/template/validate.ts](https://github.com/lucas-varela/cli/blob/v0.4.0/dist/commands/template/validate.ts)_
 <!-- commandsstop -->
