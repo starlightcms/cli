@@ -49,14 +49,16 @@ Create an application using a template.
 
 ```
 USAGE
-  $ starlight create TEMPLATE [PROJECTNAME] [--typescript]
+  $ starlight create TEMPLATE [PROJECTNAME] [--typescript] [--branch <value>]
 
 ARGUMENTS
   TEMPLATE     Web Template name, git repository URL or local directory path
   PROJECTNAME  The name of the project (and directory) that will be created
 
 FLAGS
-  --typescript  Clone the TypeScript version of a Web Template (if available)
+  --branch=<value>  [default: main] Which branch to checkout when cloning Web Templates or a git repository (defaults to
+                    "main")
+  --typescript      Clone the TypeScript version of a Web Template (if available)
 
 DESCRIPTION
   Create an application using a template.
