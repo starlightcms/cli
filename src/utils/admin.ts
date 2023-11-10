@@ -1,7 +1,7 @@
 import got, { HTTPError } from 'got'
 import { APIResourceResponse, Organization, Workspace } from '../types/adminApi'
 import { BaseCommand } from '../BaseCommand'
-import { input, select } from '@inquirer/prompts'
+import { input, select, Separator } from '@inquirer/prompts'
 import kebabCase from 'lodash/kebabCase'
 import { ADMIN_API_URL } from '../constants'
 
@@ -20,18 +20,83 @@ export const selectOrganization = async (
       .get('organizations?limit=100')
       .json<APIResourceResponse<Organization[]>>()
 
-    return select({
+    const selection = await select({
       message: 'Select an organization',
-      choices: response.data.map((organization) => ({
-        name: organization.title,
-        value: organization,
-        description: `Organization ID: ${organization.id}`,
-      })),
+      choices: [
+        new Separator(),
+        {
+          name: '🆕 Create organization',
+          value: null,
+          description:
+            'Create an organization (Note: you will be assigned as its administrator)',
+        },
+        new Separator(),
+        ...response.data.map((organization) => ({
+          name: organization.title,
+          value: organization,
+          description: `Organization ID: ${organization.id}`,
+        })),
+      ],
     })
+
+    return selection ?? (await createOrganization(command))
   } catch (error: any) {
     if (error instanceof HTTPError) {
       command.exitWithError(
         'something went wrong while fetching your organizations.',
+        error,
+      )
+    }
+
+    throw error
+  }
+}
+
+export const createOrganization = async (
+  command: BaseCommand,
+): Promise<Organization> => {
+  const organizationName = await input({
+    message: 'Organization name:',
+  })
+
+  const organizationSlug = await input({
+    message: 'Organization slug:',
+    default: kebabCase(organizationName),
+  })
+
+  try {
+    const response = await admin
+      .post(`organizations`, {
+        json: {
+          title: organizationName,
+          slug: organizationSlug,
+        },
+      })
+      .json<APIResourceResponse<Organization>>()
+
+    return response.data
+  } catch (error: any) {
+    if (error instanceof HTTPError) {
+      // If the given slug is already being used, let the user try again.
+      if (
+        error.response.statusCode === 422 &&
+        typeof error.response.body === 'string'
+      ) {
+        const response = JSON.parse(error.response.body)
+
+        if (
+          response?.errors?.slug?.[0] ===
+          'The slug has already been taken by another organization.'
+        ) {
+          command.log(
+            '⚠️ An organization with this slug already exists, try using another one.',
+          )
+          return createOrganization(command)
+        }
+      }
+
+      command.exitWithError(
+        `something went wrong while creating an organization.`,
         error,
       )
     }
@@ -49,14 +114,25 @@ export const selectWorkspace = async (
       .get(`organizations/${organization.slug}/workspaces`)
       .json<APIResourceResponse<Workspace[]>>()
 
-    return select({
+    const selection = await select({
       message: 'Select a workspace',
-      choices: response.data.map((workspace) => ({
-        name: workspace.title,
-        value: workspace,
-        description: `Workspace ID: ${workspace.id}`,
-      })),
+      choices: [
+        new Separator(),
+        {
+          name: '🆕 Create workspace',
+          value: null,
+          description: `Create a workspace in the ${organization.title} organization`,
+        },
+        new Separator(),
+        ...response.data.map((workspace) => ({
+          name: workspace.title,
+          value: workspace,
+          description: `Workspace ID: ${workspace.id}`,
+        })),
+      ],
     })
+
+    return selection ?? (await createWorkspace(command, organization))
   } catch (error: any) {
     if (error instanceof HTTPError) {
       command.exitWithError(
@@ -95,6 +171,24 @@ export const createWorkspace = async (
     return response.data
   } catch (error: any) {
     if (error instanceof HTTPError) {
+      // If the given slug is already being used, let the user try again.
+      if (
+        error.response.statusCode === 422 &&
+        typeof error.response.body === 'string'
+      ) {
+        const response = JSON.parse(error.response.body)
+
+        if (
+          response?.errors?.slug?.[0] ===
+          'The slug has already been taken by another workspace in this organization.'
+        ) {
+          command.log(
+            '⚠️ A workspace with this slug already exists, try using another one.',
+          )
+          return createWorkspace(command, organization)
+        }
+      }
+
       command.exitWithError(
         `something went wrong while creating a workspace in the ${organization.title} organization.`,
         error,

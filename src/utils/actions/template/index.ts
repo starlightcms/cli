@@ -31,9 +31,13 @@ export const runTemplateActions = async (
   rootFolder: string,
   parameters: TemplateParameters,
   command: BaseCommand,
+  ignoreMigrations = false,
+  // eslint-disable-next-line max-params
 ): Promise<void> => {
   if (templateMetadata.actions && templateMetadata.actions.length > 0) {
     for (const action of templateMetadata.actions) {
+      if (ignoreMigrations && action.type === 'migrate') continue
+
       if (Object.prototype.hasOwnProperty.call(actionRunners, action.type)) {
         /* eslint-disable no-await-in-loop --
          * It's okay to disable this rule here. The action array order needs
