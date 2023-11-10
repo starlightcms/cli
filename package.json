@@ -6,10 +6,10 @@
   "bin": {
     "starlight": "./bin/run"
   },
-  "homepage": "https://github.com/lucas-varela/cli",
+  "homepage": "https://github.com/starlightcms/cli",
   "license": "MIT",
   "main": "dist/index.js",
-  "repository": "lucas-varela/cli",
+  "repository": "starlightcms/cli",
   "files": [
     "/bin",
     "/dist",
@@ -84,7 +84,7 @@
   "engines": {
     "node": ">=16.0.0"
   },
-  "bugs": "https://github.com/lucas-varela/cli/issues",
+  "bugs": "https://github.com/starlightcms/cli/issues",
   "keywords": [
     "oclif"
   ],
