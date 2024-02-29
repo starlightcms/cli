@@ -8,6 +8,7 @@ import { entryImporter } from './entry'
 import { singletonImporter } from './singleton'
 import { mediaImporter } from './media'
 import { collectionItemsImporter } from './collectionItems'
+import { modelCategoryEntriesImporter } from './modelCategoryEntries'
 
 export type ContentImporter<Descriptor extends ContentDescriptor> = (
   descriptor: Descriptor,
@@ -29,4 +30,5 @@ export const contentImporters: ContentImporterMap = {
   singleton: singletonImporter,
   media: mediaImporter,
   collectionItems: collectionItemsImporter,
+  modelCategoryEntries: modelCategoryEntriesImporter,
 }

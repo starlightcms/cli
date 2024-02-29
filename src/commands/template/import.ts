@@ -135,5 +135,8 @@ export default class Import extends BaseCommand {
     this.log(
       `Access the new content at ${STARLIGHT_FRONT_URL}/@${organization.slug}/${workspace.slug}`,
     )
+    this.log(
+      `To use this workspace with a Starlight SDK, use the following workspace ID: ${workspace.id}`,
+    )
   }
 }

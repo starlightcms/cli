@@ -71,6 +71,12 @@ const contentDescriptorSchemas: ContentDescriptorSchemaMap = {
     collection: string().required(),
     items: array().of(string().required()).required(),
   }),
+  modelCategoryEntries: object({
+    type: string().oneOf(['modelCategoryEntries']).required(),
+    model: string().required(),
+    category: string().required(),
+    entries: array().of(string().required()).required(),
+  }),
 }
 
 const contentDescriptorSchema = lazy(

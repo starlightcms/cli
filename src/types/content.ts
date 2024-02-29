@@ -31,11 +31,19 @@ export interface CollectionItemsDescriptor extends ContentDescriptor {
   items: string[]
 }
 
+export interface ModelCategoryEntriesDescriptor extends ContentDescriptor {
+  type: 'modelCategoryEntries'
+  model: string
+  category: string
+  entries: string[]
+}
+
 export type ContentDescriptorMap = {
   entry: EntryDescriptor
   singleton: SingletonDescriptor
   media: MediaObjectDescriptor
   collectionItems: CollectionItemsDescriptor
+  modelCategoryEntries: ModelCategoryEntriesDescriptor
 }
 
 export type ContentDescriptorTypes = keyof ContentDescriptorMap
