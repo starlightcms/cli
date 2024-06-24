@@ -326,15 +326,17 @@ will warn you in case the chosen template doesn't have a TypeScript version.`
       })
       ux.action.stop()
     } catch (error: any) {
-      if (typescript) {
-        this.exitWithError(
-          'something went wrong while retrieving the template. Check the template name for typos and if the given template really has a TypeScript variant.',
-          error,
-        )
-      }
+      const message =
+        error.status === 404
+          ? 'template not found'
+          : 'something went wrong while retrieving the template'
 
       this.exitWithError(
-        'something went wrong while retrieving the template. Check the template name for typos and try again.',
+        `${message}. Check the template name for typos ${
+          typescript
+            ? 'and if the given template really has a TypeScript variant, then try again'
+            : 'and try again'
+        }.`,
         error,
       )
     }
