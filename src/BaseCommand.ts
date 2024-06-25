@@ -17,6 +17,8 @@ type AuthData = {
 }
 
 export abstract class BaseCommand extends Command {
+  protected shouldLogout = false
+
   public exitWithError(
     message?: string,
     originalError?: Error,
@@ -25,10 +27,21 @@ export abstract class BaseCommand extends Command {
     // Stop any running spinners.
     ux.action.stop('failed')
 
+    this.log()
     this.log(`🛑 Error: ${message ?? 'an unknown error occurred.'}`)
+    this.log()
 
     if (originalError) {
+      if (originalError instanceof HTTPError && originalError.response.body) {
+        this.log(
+          `⚠️ HTTP error ${originalError.response.statusCode}, response body:`,
+        )
+        this.log(JSON.stringify(originalError.response.body, null, 4))
+        this.log()
+      }
+
       this.log('⚠️ Original error message:')
+
       this.error(originalError ?? '', { exit: exitCode })
     }
 
@@ -289,25 +302,39 @@ export abstract class BaseCommand extends Command {
     this.log(`👋 You logged out.`)
   }
 
-  public async needsAuthentication(message?: string): Promise<void> {
+  public async needsAuthentication(
+    message?: string,
+    email?: string,
+    password?: string,
+  ): Promise<void> {
     ux.action.start('Checking authentication')
 
-    const data = await this.getAuthData()
+    let loginData: LoginResponseData
 
-    if (data && data.token && (await this.validateToken(data))) {
+    if (email && password) {
+      loginData = await this.loginOnce(email, password)
+      this.shouldLogout = true
       ux.action.stop()
-      return
+    } else {
+      const data = await this.getAuthData()
+
+      if (data && data.token && (await this.validateToken(data))) {
+        ux.action.stop()
+        return
+      }
+
+      ux.action.stop('not authenticated')
+      this.log()
+
+      const [userEmail, response] = await this.login(message)
+
+      loginData = response
+
+      await this.setAuthData({
+        email: userEmail,
+        token: loginData.token,
+      })
     }
-
-    ux.action.stop('not authenticated')
-    this.log()
-
-    const [email, loginData] = await this.login(message)
-
-    await this.setAuthData({
-      email,
-      token: loginData.token,
-    })
 
     // Set token cookie in all Admin API calls
     admin.defaults.options.headers = {
@@ -315,5 +342,47 @@ export abstract class BaseCommand extends Command {
     }
 
     this.log('✅ Authenticated, continuing...')
+  }
+
+  private async loginOnce(
+    email: string,
+    password: string,
+  ): Promise<LoginResponseData> {
+    try {
+      return await got.post<LoginResponseData>(`${ADMIN_API_URL}/auth/login`, {
+        json: { email, password },
+        throwHttpErrors: true,
+        responseType: 'json',
+        resolveBodyOnly: true,
+      })
+    } catch (error: any) {
+      ux.action.stop('error')
+
+      if (
+        error instanceof HTTPError &&
+        (error.response.statusCode === 422 || error.response.statusCode === 401)
+      ) {
+        this.exitWithError(
+          'logging in failed, are you sure your email and password are correct?',
+          error,
+        )
+      }
+
+      this.exitWithError('something went wrong while logging in.', error)
+    }
+  }
+
+  protected async finally(error?: Error): Promise<any> {
+    if (this.shouldLogout) {
+      try {
+        await admin.post(`auth/logout`)
+      } catch {
+        this.warn(
+          'automatic logout failed, but this is probably fine since the token generated is short-lived 🐶☕️🔥.',
+        )
+      }
+    }
+
+    return super.finally(error)
   }
 }

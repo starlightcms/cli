@@ -7,7 +7,7 @@ import {
 import { getDotStarlightPath, getJsonFromFile } from '../../utils/fs'
 import { MigrateAction, TemplateFile } from '../../types/template'
 import chalk from 'chalk'
-import { createWorkspace, selectOrganization } from '../../utils/admin'
+import { promptAndCreateWorkspace, selectOrganization } from '../../utils/admin'
 import { SchemaFile } from '../../types/schema'
 import { runSchemaActions } from '../../utils/actions/schema'
 import path from 'node:path'
@@ -76,7 +76,7 @@ export default class Import extends BaseCommand {
     }
 
     const organization = await selectOrganization(this)
-    const workspace = await createWorkspace(this, organization)
+    const workspace = await promptAndCreateWorkspace(this, organization)
     const parameters = makeParameterMap(
       organization.title,
       organization,

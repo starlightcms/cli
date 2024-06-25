@@ -11,6 +11,8 @@ import { BaseCommand } from '../BaseCommand'
 import { octokit } from '../utils/github'
 import {
   createWorkspace,
+  getOrganization,
+  promptAndCreateWorkspace,
   selectOrganization,
   selectWorkspace,
 } from '../utils/admin'
@@ -80,6 +82,30 @@ will warn you in case the chosen template doesn't have a TypeScript version.`
         'Which branch to checkout when cloning Web Templates or a git repository (defaults to "main")',
       default: 'main',
     }),
+    email: Flags.string({
+      description:
+        'E-mail address used to log in. If passed, the --password flag is required.',
+      dependsOn: ['password'],
+    }),
+    password: Flags.string({
+      description:
+        'Password used to log in. If passed, the --email flag is required.',
+      dependsOn: ['email'],
+    }),
+    organization: Flags.string({
+      description: 'An organization slug to use when importing content.',
+      dependsOn: ['workspace-name', 'workspace-slug'],
+    }),
+    'workspace-name': Flags.string({
+      description:
+        'The name of the workspace that should be created when importing content. If passed, the --organization and --workspace-slug flags are required.',
+      dependsOn: ['organization', 'workspace-slug'],
+    }),
+    'workspace-slug': Flags.string({
+      description:
+        'The slug of the workspace that should be created when importing content. If passed, the --organization and --workspace-name flags are required.',
+      dependsOn: ['organization', 'workspace-name'],
+    }),
   }
 
   static args = {
@@ -98,7 +124,11 @@ will warn you in case the chosen template doesn't have a TypeScript version.`
   public async run(): Promise<void> {
     const { args, flags } = await this.parse(Create)
 
-    await this.needsAuthentication('You need to login to create a new project')
+    await this.needsAuthentication(
+      'You need to log in to create a new project',
+      flags.email,
+      flags.password,
+    )
 
     const [projectName, projectPath] = await this.promptProjectInfo(
       args.template,
@@ -132,10 +162,32 @@ will warn you in case the chosen template doesn't have a TypeScript version.`
     await installDependencies(projectPath)
     ux.action.stop()
 
+    let organization: Organization | undefined
+    let workspace: Workspace | undefined
+
+    if (flags.organization) {
+      organization = await getOrganization(flags.organization, this)
+    }
+
+    if (
+      flags.organization &&
+      flags['workspace-name'] &&
+      flags['workspace-slug']
+    ) {
+      workspace = await createWorkspace(
+        flags.organization,
+        flags['workspace-name'],
+        flags['workspace-slug'],
+        this,
+      )
+    }
+
     // Configure template and optionally run migrations.
     const metadata = await this.runTemplateActions(
       dotStarlightPath,
       projectName,
+      organization,
+      workspace,
     )
 
     // Initialize a git repository and create an initial commit.
@@ -180,6 +232,8 @@ will warn you in case the chosen template doesn't have a TypeScript version.`
   private async runTemplateActions(
     dotStarlightPath: string,
     projectName: string,
+    providedOrganization?: Organization,
+    providedWorkspace?: Workspace,
   ): Promise<TemplateSetupMetadata | undefined> {
     try {
       let templateParameters: TemplateParameters | null
@@ -193,27 +247,37 @@ will warn you in case the chosen template doesn't have a TypeScript version.`
       if (
         templateMetadata.actions?.find((action) => action.type === 'migrate')
       ) {
-        const selection = await select({
-          message:
-            'This template includes example content. Do you want to import it into Starlight?',
-          choices: [
-            {
-              name: 'Import template content into Starlight in a new workspace',
-              value: 'import',
-            },
-            {
-              name: 'Skip importing template content and create a blank workspace or select an existing one',
-              value: 'select',
-            },
-          ],
-        })
+        const selection =
+          providedOrganization && providedWorkspace
+            ? 'import'
+            : await select({
+                message:
+                  'This template includes example content. Do you want to import it into Starlight?',
+                choices: [
+                  {
+                    name: 'Import template content into Starlight in a new workspace',
+                    value: 'import',
+                  },
+                  {
+                    name: 'Skip importing template content and create a blank workspace or select an existing one',
+                    value: 'select',
+                  },
+                ],
+              })
 
         if (selection === 'import') {
-          organization = await selectOrganization(this)
-          this.log(
-            `Create a workspace in the ${organization.title} organization:`,
-          )
-          workspace = await createWorkspace(this, organization)
+          organization =
+            providedOrganization ?? (await selectOrganization(this))
+
+          if (!providedWorkspace) {
+            this.log(
+              `Create a workspace in the ${organization.title} organization:`,
+            )
+          }
+
+          workspace =
+            providedWorkspace ??
+            (await promptAndCreateWorkspace(this, organization))
 
           templateParameters = makeParameterMap(
             projectName,
@@ -239,8 +303,9 @@ will warn you in case the chosen template doesn't have a TypeScript version.`
         }
       }
 
-      organization = await selectOrganization(this)
-      workspace = await selectWorkspace(this, organization)
+      organization = providedOrganization ?? (await selectOrganization(this))
+      workspace =
+        providedWorkspace ?? (await selectWorkspace(this, organization))
       templateParameters = makeParameterMap(
         projectName,
         organization,

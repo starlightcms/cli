@@ -12,6 +12,33 @@ export const admin = got.extend({
   prefixUrl: ADMIN_API_URL,
 })
 
+export const getOrganization = async (
+  slug: string,
+  command: BaseCommand,
+): Promise<Organization> => {
+  try {
+    const response = await admin.get<APIResourceResponse<Organization>>({
+      url: `organizations/${slug}`,
+      resolveBodyOnly: true,
+      responseType: 'json',
+    })
+
+    return response.data
+  } catch (error: any) {
+    if (error instanceof HTTPError && error.response.statusCode === 404) {
+      command.exitWithError(
+        'error 404 while requesting organization information, are you sure the given organization exists?',
+        error,
+      )
+    }
+
+    command.exitWithError(
+      'something went wrong while requesting organization information, check response for more details.',
+      error,
+    )
+  }
+}
+
 export const selectOrganization = async (
   command: BaseCommand,
 ): Promise<Organization> => {
@@ -39,7 +66,7 @@ export const selectOrganization = async (
       ],
     })
 
-    return selection ?? (await createOrganization(command))
+    return selection ?? (await promptAndCreateOrganization(command))
   } catch (error: any) {
     if (error instanceof HTTPError) {
       command.exitWithError(
@@ -52,7 +79,7 @@ export const selectOrganization = async (
   }
 }
 
-export const createOrganization = async (
+export const promptAndCreateOrganization = async (
   command: BaseCommand,
 ): Promise<Organization> => {
   const organizationName = await input({
@@ -91,7 +118,7 @@ export const createOrganization = async (
           command.log(
             '⚠️ An organization with this slug already exists, try using another one.',
           )
-          return createOrganization(command)
+          return promptAndCreateOrganization(command)
         }
       }
 
@@ -132,7 +159,7 @@ export const selectWorkspace = async (
       ],
     })
 
-    return selection ?? (await createWorkspace(command, organization))
+    return selection ?? (await promptAndCreateWorkspace(command, organization))
   } catch (error: any) {
     if (error instanceof HTTPError) {
       command.exitWithError(
@@ -146,6 +173,44 @@ export const selectWorkspace = async (
 }
 
 export const createWorkspace = async (
+  organization: string,
+  name: string,
+  slug: string,
+  command: BaseCommand,
+): Promise<Workspace> => {
+  try {
+    const response = await admin.post<APIResourceResponse<Workspace>>({
+      url: `organizations/${organization}/workspaces`,
+      json: { title: name, slug },
+      resolveBodyOnly: true,
+      responseType: 'json',
+    })
+
+    return response.data
+  } catch (error: any) {
+    if (error instanceof HTTPError && error.response.statusCode === 404) {
+      command.exitWithError(
+        'error 404 while creating a workspace, are you sure the given organization exists?',
+        error,
+      )
+    } else if (
+      error instanceof HTTPError &&
+      error.response.statusCode === 422
+    ) {
+      command.exitWithError(
+        'validation error while creating a workspace, are you sure the given slug is unique within the given organization?',
+        error,
+      )
+    }
+
+    command.exitWithError(
+      'something went wrong while creating a workspace.',
+      error,
+    )
+  }
+}
+
+export const promptAndCreateWorkspace = async (
   command: BaseCommand,
   organization: Organization,
 ): Promise<Workspace> => {
@@ -185,7 +250,7 @@ export const createWorkspace = async (
           command.log(
             '⚠️ A workspace with this slug already exists, try using another one.',
           )
-          return createWorkspace(command, organization)
+          return promptAndCreateWorkspace(command, organization)
         }
       }
 
