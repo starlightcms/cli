@@ -49,16 +49,24 @@ Create an application using a template.
 
 ```
 USAGE
-  $ starlight create TEMPLATE [PROJECTNAME] [--typescript] [--branch <value>]
+  $ starlight create TEMPLATE [PROJECTNAME] [--typescript] [--branch <value>] [--email <value> --password
+    <value>] [--organization <value> --workspace-name <value> --workspace-slug <value>]
 
 ARGUMENTS
   TEMPLATE     Web Template name, git repository URL or local directory path
   PROJECTNAME  The name of the project (and directory) that will be created
 
 FLAGS
-  --branch=<value>  [default: main] Which branch to checkout when cloning Web Templates or a git repository (defaults to
-                    "main")
-  --typescript      Clone the TypeScript version of a Web Template (if available)
+  --branch=<value>          [default: main] Which branch to checkout when cloning Web Templates or a git repository
+                            (defaults to "main")
+  --email=<value>           E-mail address used to log in. If passed, the --password flag is required.
+  --organization=<value>    An organization slug to use when importing content.
+  --password=<value>        Password used to log in. If passed, the --email flag is required.
+  --typescript              Clone the TypeScript version of a Web Template (if available)
+  --workspace-name=<value>  The name of the workspace that should be created when importing content. If passed, the
+                            --organization and --workspace-slug flags are required.
+  --workspace-slug=<value>  The slug of the workspace that should be created when importing content. If passed, the
+                            --organization and --workspace-name flags are required.
 
 DESCRIPTION
   Create an application using a template.
